@@ -31,7 +31,6 @@ class DataLoader(object):
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
                                                                  os.path.join("data", "train", "resized", img + ".jpg"))
 
-
     def valid_gen(self):
         # allocate an array for images
         images = np.zeros((len(self.valid_images), self.image_size, self.image_size, 3), dtype=np.float32)
@@ -40,7 +39,7 @@ class DataLoader(object):
         # return images and labels. We need to change the order of axis here, because
         # imread returns an array of shape (img_size, img_size, n_channels), while the conv layers
         # expect shape (batch_size, n_channels, img_size, img_size)
-        return np.rollaxis(images, 3, 1), self.valid_labels.values
+        return np.rollaxis(images, 3, 1), self.valid_labels.values.astype(np.int32)[np.newaxis].T
 
     def train_gen(self):
         # allocate an array for images
@@ -54,4 +53,4 @@ class DataLoader(object):
                 for i, image in enumerate(self.train_images[chunk_slice]):
                     images[i, ...] = imread(image)
                 # change axis order (see comments in valid_gen function) and yield images with labels
-                yield np.rollaxis(images, 3, 1), self.train_labels[chunk_slice].values
+                yield np.rollaxis(images, 3, 1), self.train_labels[chunk_slice].values.astype(np.int32)[np.newaxis].T
