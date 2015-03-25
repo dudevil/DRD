@@ -9,7 +9,7 @@ from lasagne import layers
 from load_dataset import DataLoader
 from utils import *
 
-IMAGE_SIZE = 224
+IMAGE_SIZE = 128
 BATCH_SIZE = 128
 LEARNING_RATE = 0.01
 MOMENTUM = 0.9
@@ -24,7 +24,7 @@ num_train_batches = len(train_x) // BATCH_SIZE
 train_x = theano.shared(lasagne.utils.floatX(train_x))
 train_y = theano.shared(train_y)
 # get validation data chunk and load it into GPU
-valid_x, valid_y = dloader.train_gen().next()
+valid_x, valid_y = dloader.valid_gen()
 num_valid_batches = len(valid_x) // BATCH_SIZE
 valid_x = theano.shared(lasagne.utils.floatX(valid_x))
 valid_y = theano.shared(valid_y)
@@ -35,7 +35,7 @@ valid_y = theano.shared(valid_y)
 print("Building model...")
 
 
-input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
+input = layers.InputLayer(shape=(None, 3, IMAGE_SIZE, IMAGE_SIZE))
 
 conv1 = layers.Conv2DLayer(input,
                            num_filters=32,
@@ -90,7 +90,6 @@ output = layers.DenseLayer(dense2_dropout,
 # collect layers to save them later
 all_layers = [input, conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, conv5, pool5,
               dense1, dense1_dropout, dense2, dense2_dropout, output]
-
 
 # allocate symbolic variables for theano graph computations
 batch_index = T.iscalar('batch_index')
@@ -169,7 +168,7 @@ for x_next, y_next in dloader.train_gen():
     # with batch_size = 128 an epoch takes about 247 iterations
     # we measure validation performance once per epoch
     # it's quick and dirty
-    if not (_iter % 247):
+    if not (_iter % 29):
         batch_valid_losses = []
         valid_predictions = []
         # get prediction and error on validation set

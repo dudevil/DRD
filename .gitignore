@@ -3,6 +3,7 @@
 analisys/.ipynb_checkpoints/
 data/*.zip*
 data/*.csv
-data/train/*.jpeg
-data/train/resized/*.jpg
 *.7z
+*.png
+*.jpeg
+*.jpg
