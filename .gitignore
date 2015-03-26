@@ -1,9 +1,12 @@
 .idea
 *.pyc
 analisys/.ipynb_checkpoints/
+analisys/misc.ipynb
 data/*.zip*
 data/*.csv
 *.7z
 *.png
 *.jpeg
 *.jpg
+data/submissions/
+data/tidy
