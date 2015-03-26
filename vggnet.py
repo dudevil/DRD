@@ -168,7 +168,7 @@ for x_next, y_next in dloader.train_gen():
     # with batch_size = 128 an epoch takes about 247 iterations
     # we measure validation performance once per epoch
     # it's quick and dirty
-    if not (_iter % 29):
+    if not (_iter + 1) % 30:
         batch_valid_losses = []
         valid_predictions = []
         # get prediction and error on validation set

@@ -14,11 +14,13 @@ class DataLoader(object):
                  datadir='data',
                  image_size=224,
                  chunk_size=1024,
-                 random_state=0):
+                 random_state=0,
+                 normalize=True):
         self.datadir = datadir
         self.random_state = random_state
         self.image_size = image_size
         self.chunk_size = chunk_size
+        self.norm = normalize
 
         labels = pd.read_csv(os.path.join(self.datadir, "trainLabels.csv"))
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
@@ -35,34 +37,44 @@ class DataLoader(object):
         self.test_images = [os.path.join(self.datadir, "test", "resized", img) for img in
                             os.listdir(os.path.join(self.datadir, "test", "resized"))]
 
+        if self.norm:
+            self.mean, self.std = self.get_mean_std(self.train_images)
+
     def valid_gen(self):
         # allocate an array for images
         images = np.zeros((len(self.valid_images), self.image_size, self.image_size, 3), dtype=np.float32)
         for i, image in enumerate(self.valid_images):
-            images[i, ...] = imread(image)
+            images[i, ...] = imread(image) / 255.
         # return images and labels. We need to change the order of axis here, because
         # imread returns an array of shape (img_size, img_size, n_channels), while the conv layers
         # expect shape (batch_size, n_channels, img_size, img_size)
+        if self.norm:
+            images = self.normalize(images)
         return np.rollaxis(images, 3, 1), self.valid_labels.values.astype(np.int32)[np.newaxis].T
 
     def train_gen(self):
         # allocate an array for images
         images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
-        n_chunks = int(np.ceil(len(self.train_images) * 1. / self.chunk_size))
+        n_images = len(self.train_images)
+        n_chunks = int(np.ceil(n_images * 1. / self.chunk_size))
         while n_chunks:
+            images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
             for chunk in xrange(n_chunks):
                 # prepare a slice of images to read during this pass
                 chunk_end = (chunk + 1) * self.chunk_size
                 # we need this to get images if the test set is not divisible by chunk_size
 
-                if len(self.test_images) < chunk_end:
-                    images = np.zeros((len(self.test_images) - chunk * self.chunk_size,
+                if len(self.train_images) < chunk_end:
+                    images = np.zeros((n_images - chunk * self.chunk_size,
                                        self.image_size, self.image_size, 3))
-                    chunk_end = len(self.test_images)
+                    chunk_end = n_images
                 chunk_slice = slice(chunk * self.chunk_size, chunk_end)
                 # read a chunk of images
                 for i, image in enumerate(self.train_images[chunk_slice]):
-                    images[i, ...] = imread(image)
+                    img = imread(image) / 255.
+                    images[i, ...] = img
+                if self.norm:
+                    images = self.normalize(images)
                 # change axis order (see comments in valid_gen function) and yield images with labels
                 yield np.rollaxis(images, 3, 1), self.train_labels[chunk_slice].values.astype(np.int32)[np.newaxis].T
         print("Number of images is less than chunk size.")
@@ -81,7 +93,21 @@ class DataLoader(object):
             chunk_slice = slice(chunk * self.chunk_size, chunk_end)
             # read a chunk of images
             for i, image in enumerate(self.test_images[chunk_slice]):
-                images[i, ...] = imread(image)
+                images[i, ...] = imread(image) / 255.
             # change axis order (see comments in valid_gen function) and yield images with labels
             yield np.rollaxis(images, 3, 1)
 
+    def get_mean_std(self, images):
+        mean = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
+        mean_sqr = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
+        n_images = len(images)
+        for image in images:
+            img = imread(image) / 255.
+            mean += img
+            mean_sqr += np.square(img)
+        mean = mean / n_images
+        std = np.sqrt(mean_sqr / n_images - np.square(mean))
+        return mean, std
+
+    def normalize(self, images):
+        return (images - self.mean) / (self.std + 1e-5)
