@@ -3,29 +3,37 @@ __author__ = 'dudevil'
 import os.path
 import pandas as pd
 import numpy as np
-import theano
-from sklearn.cross_validation import StratifiedShuffleSplit
+from PIL import Image, ImageEnhance
+from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
+from skimage import exposure
+from multiprocessing import Pool, cpu_count
 
+
+def read_files(image_file, image_size=224):
+    image = imread(image_file) / 255.
+    return image
 
 class DataLoader(object):
 
     def __init__(self,
                  datadir='data',
                  image_size=224,
-                 chunk_size=1024,
+                 chunk_size=512,
                  random_state=0,
-                 normalize=True):
+                 normalize=True,
+                 n_jobs=3):
         self.datadir = datadir
-        self.random_state = random_state
         self.image_size = image_size
         self.chunk_size = chunk_size
         self.norm = normalize
 
         labels = pd.read_csv(os.path.join(self.datadir, "trainLabels.csv"))
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=3456, random_state=random_state)
+        sss = StratifiedShuffleSplit(labels.level, 1, test_size=3585, random_state=random_state)
+        #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
+        #self.train_index = self.train_index[:1000]
         # get train and validation labels
         self.train_labels = labels.level[self.train_index]
         self.valid_labels = labels.level[self.valid_index]
@@ -40,62 +48,115 @@ class DataLoader(object):
         if self.norm:
             self.mean, self.std = self.get_mean_std(self.train_images)
 
+        self.n_jobs = cpu_count() if n_jobs == -1 else n_jobs
+        if self.n_jobs:
+            self.pool = Pool(self.n_jobs)
+        self.random = np.random.RandomState(random_state)
+
+
     def valid_gen(self):
-        # allocate an array for images
-        images = np.zeros((len(self.valid_images), self.image_size, self.image_size, 3), dtype=np.float32)
-        for i, image in enumerate(self.valid_images):
-            images[i, ...] = imread(image) / 255.
-        # return images and labels. We need to change the order of axis here, because
-        # imread returns an array of shape (img_size, img_size, n_channels), while the conv layers
-        # expect shape (batch_size, n_channels, img_size, img_size)
-        if self.norm:
-            images = self.normalize(images)
-        return np.rollaxis(images, 3, 1), self.valid_labels.values.astype(np.int32)[np.newaxis].T
+        if self.n_jobs:
+            return self._batch_iter_parallel(self.valid_images, self.valid_labels)
+        else:
+            return self._image_iterator(self.valid_images, labels=self.valid_labels)
 
     def train_gen(self):
-        # allocate an array for images
-        images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
-        n_images = len(self.train_images)
-        n_chunks = int(np.ceil(n_images * 1. / self.chunk_size))
-        while n_chunks:
-            images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
-            for chunk in xrange(n_chunks):
-                # prepare a slice of images to read during this pass
-                chunk_end = (chunk + 1) * self.chunk_size
-                # we need this to get images if the test set is not divisible by chunk_size
-
-                if len(self.train_images) < chunk_end:
-                    images = np.zeros((n_images - chunk * self.chunk_size,
-                                       self.image_size, self.image_size, 3))
-                    chunk_end = n_images
-                chunk_slice = slice(chunk * self.chunk_size, chunk_end)
-                # read a chunk of images
-                for i, image in enumerate(self.train_images[chunk_slice]):
-                    img = imread(image) / 255.
-                    images[i, ...] = img
-                if self.norm:
-                    images = self.normalize(images)
-                # change axis order (see comments in valid_gen function) and yield images with labels
-                yield np.rollaxis(images, 3, 1), self.train_labels[chunk_slice].values.astype(np.int32)[np.newaxis].T
-        print("Number of images is less than chunk size.")
+        if self.n_jobs:
+            return self._batch_iter_parallel(self.train_images, self.train_labels)
+        else:
+            return self._image_iterator(self.train_images, labels=self.train_labels, transform=True)
 
     def test_gen(self):
+        return self._image_iterator(self.test_images)
+        # will leave this as a backup :)
+        # images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
+        # n_chunks = int(np.ceil(len(self.test_images) * 1. / self.chunk_size))
+        # for chunk in xrange(n_chunks):
+        #     # prepare a slice of images to read during this pass
+        #     chunk_end = (chunk + 1) * self.chunk_size
+        #     # we need this to get images if the test set is not divisible by chunk_size
+        #     if len(self.test_images) < chunk_end:
+        #         images = np.zeros((len(self.test_images) - chunk * self.chunk_size,
+        #                            self.image_size, self.image_size, 3))
+        #         chunk_end = len(self.test_images)
+        #     chunk_slice = slice(chunk * self.chunk_size, chunk_end)
+        #     # read a chunk of images
+        #     for i, image in enumerate(self.test_images[chunk_slice]):
+        #         images[i, ...] = imread(image) / 255.
+        #     if self.norm:
+        #         self.normalize(images)
+        #     # change axis order (see comments in valid_gen function) and yield images with labels
+        #     yield np.rollaxis(images, 3, 1)
+
+    def _transform(self, image):
+        # img = Image.open(image)
+        # enhancer = ImageEnhance.Contrast(img)
+        # factor = self.random.uniform(.5, 2.)
+        # out = np.array(enhancer.enhance(factor), dtype=np.float32) / 255.
+        img = imread(image) / 255.
+        # flip verticaly with 1/2 probability
+        if self.random.randint(2):
+            img = img[::-1, ...]
+        # flip horizontaly
+        # if self.random.randint(2):
+        #     img = img[:, ::-1, ...]
+        return img
+
+
+    def _image_iterator(self, image_list, labels=None, transform=False):
+        # allocate an array for images
         images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
-        n_chunks = int(np.ceil(len(self.test_images) * 1. / self.chunk_size))
+        n_images = len(image_list)
+        n_chunks = n_images // self.chunk_size
         for chunk in xrange(n_chunks):
             # prepare a slice of images to read during this pass
             chunk_end = (chunk + 1) * self.chunk_size
-            # we need this to get images if the test set is not divisible by chunk_size
-            if len(self.test_images) < chunk_end:
-                images = np.zeros((len(self.test_images) - chunk * self.chunk_size,
-                                   self.image_size, self.image_size, 3))
-                chunk_end = len(self.test_images)
             chunk_slice = slice(chunk * self.chunk_size, chunk_end)
             # read a chunk of images
-            for i, image in enumerate(self.test_images[chunk_slice]):
-                images[i, ...] = imread(image) / 255.
+            for i, image in enumerate(image_list[chunk_slice]):
+                if transform:
+                    images[i, ...] = self._transform(image)
+                else:
+                    images[i, ...] = imread(image) / 255.
+            if self.norm:
+                images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield np.rollaxis(images, 3, 1)
+            if labels is not None:
+                # transform labels to a collumn, but first we need to add a new axis
+                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(np.int32)
+            else:
+                yield np.rollaxis(images, 3, 1)
+        # we need to this if the train set size is not divisible by chunk_size
+        if n_images > chunk_end:
+            imgs_left = n_images - chunk_end
+            images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=np.float32)
+            for i, image in enumerate(self.train_images[chunk_end: n_images]):
+                if transform:
+                    images[i, ...] = self._transform(image)
+                else:
+                    images[i, ...] = imread(image) / 255.
+            if self.norm:
+                images = self.normalize(images)
+            # change axis order (see comments in valid_gen function) and yield images with labels
+            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(np.int32)
+
+    def _batch_iter_parallel(self, image_list, labels):
+        batch_size = 128
+        n_images = len(image_list)
+        n_chunks = n_images // self.chunk_size
+        last_slice = slice(0, self.chunk_size)
+        i = b = 0
+        images = np.zeros((batch_size, self.image_size, self.image_size, 3))
+        for image in self.pool.imap(read_files, image_list, 128):
+            if i == batch_size:
+                if self.norm:
+                    self.normalize(images)
+                yield np.rollaxis(images, 3, 1)[:, 1, ...], labels[b * batch_size: (b + 1) * batch_size].values.astype(np.int32)
+                i = 0
+                b += 1
+            images[i, ...] = image
+            i += 1
+        yield np.rollaxis(images[:i], 3, 1)[:, 1, ...], labels[b * batch_size: (b + 1) * batch_size].values.astype(np.int32)
 
     def get_mean_std(self, images):
         mean = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
@@ -111,3 +172,9 @@ class DataLoader(object):
 
     def normalize(self, images):
         return (images - self.mean) / (self.std + 1e-5)
+
+    def _load_images(self):
+        images = np.zeros((4000, self.image_size, self.image_size, 3))
+        for i, img in enumerate(self.train_images):
+            images[i, ...] = imread(img) / 255.
+        return np.rollaxis(images, 3, 1), self.train_labels.values.astype(np.int32)
