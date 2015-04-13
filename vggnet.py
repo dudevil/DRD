@@ -6,15 +6,15 @@ import functools
 import operator
 import lasagne
 from lasagne import layers, regularization, nonlinearities
-from custom_layers import SliceRotateLayer, RotateMergeLayer
+from custom_layers import SliceRotateLayer, RotateMergeLayer, StochasticPoolLayer
 from load_dataset import DataLoader
 from utils import *
 
 IMAGE_SIZE = 128
 BATCH_SIZE = 32
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 50
+MAX_EPOCH = 100
 
 
 print("Loading dataset...")
@@ -42,15 +42,17 @@ slicerot = SliceRotateLayer(input)
 
 conv1 = layers.Conv2DLayer(slicerot,
                            num_filters=16,
-                           filter_size=(13, 13),
+                           filter_size=(11, 11),
                            W=lasagne.init.Orthogonal(gain='relu'))
-pool1 = layers.MaxPool2DLayer(conv1, ds=(2, 2))
+#pool1 = StochasticPoolLayer(conv1, ds=(3, 3))
+pool1 = layers.MaxPool2DLayer(conv1, ds=(3, 3))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
                            num_filters=32,
-                           filter_size=(5, 5),
+                           filter_size=(4, 4),
                            W=lasagne.init.Orthogonal(gain='relu'))
+#pool2 = StochasticPoolLayer(conv2, ds=(3, 3))
 pool2 = layers.MaxPool2DLayer(conv2, ds=(2, 2))
 
 conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.2)
@@ -58,7 +60,8 @@ conv3 = layers.Conv2DLayer(conv3_dropout,
                            num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'))
-pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
+pool3 = StochasticPoolLayer(conv3, ds=(3, 3))
+#pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
 #
 # conv4 = layers.Conv2DLayer(pool3,
 #                            num_filters=128,
@@ -85,12 +88,12 @@ dense1 = layers.DenseLayer(merge,
                            W=lasagne.init.Normal())
 dense1_dropout = lasagne.layers.DropoutLayer(dense1, p=0.5)
 
-dense2 = layers.DenseLayer(dense1,
+dense2 = layers.DenseLayer(dense1_dropout,
                            num_units=256,
                            W=lasagne.init.Normal())
 dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 
-output = layers.DenseLayer(dense2,
+output = layers.DenseLayer(dense2_dropout,
                            num_units=5,
                            nonlinearity=nonlinearities.softmax)
 
@@ -159,7 +162,7 @@ iter_valid = theano.function(
 
 # keep track of networks best performance and save net configuration
 best_epoch = 0
-best_valid = -1.
+best_valid = 1.
 # epoch and iteration counters
 epoch = 0
 _iter = 0
@@ -176,7 +179,7 @@ print("| Epoch | Train err | Validation err | Weighted Kappa | Ratio |  Time  |"
 print("|----------------------------------------------------------------------|")
 
 # get next chunks of data
-while epoch < MAX_EPOCH and patience:
+while epoch < MAX_EPOCH:
     epoch += 1
     # train the network on all chunks
     batch_train_losses = []
@@ -224,7 +227,7 @@ while epoch < MAX_EPOCH and patience:
             save_network(all_layers)
         best_valid = avg_valid_loss
         best_epoch = epoch
-        patience += 1
+        patience = 10
     else:
         #decrease patience
         patience -= 1
@@ -234,4 +237,4 @@ print("The best weighted quadratic kappa: %.5f obtained on epoch %d.\n The train
       (best_valid, best_epoch, time.time() - now))
 
 results = np.array([train_loss, valid_loss, kappa_loss], dtype=np.float)
-np.save("data/tidy/5conv_2dense.npy", results)
+np.save("data/tidy/5conv_1dense.npy", results)

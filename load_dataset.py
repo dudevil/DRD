@@ -29,12 +29,15 @@ class DataLoader(object):
         self.norm = normalize
 
         labels = pd.read_csv(os.path.join(self.datadir, "trainLabels.csv"))
+        #labels.level = labels.level.clip(upper=1)
+
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=3585, random_state=random_state)
         #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
         #self.train_index = self.train_index[:1000]
         # get train and validation labels
+
         self.train_labels = labels.level[self.train_index]
         self.valid_labels = labels.level[self.valid_index]
         # prepare train and test image files
@@ -98,8 +101,8 @@ class DataLoader(object):
         if self.random.randint(2):
             img = img[::-1, ...]
         # flip horizontaly
-        # if self.random.randint(2):
-        #     img = img[:, ::-1, ...]
+        if self.random.randint(2):
+            img = img[:, ::-1, ...]
         return img
 
 
