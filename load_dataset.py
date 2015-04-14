@@ -32,7 +32,7 @@ class DataLoader(object):
         #labels.level = labels.level.clip(upper=1)
 
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=3585, random_state=random_state)
+        sss = StratifiedShuffleSplit(labels.level, 1, test_size=3072, random_state=random_state)
         #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
         #self.train_index = self.train_index[:1000]
@@ -126,7 +126,8 @@ class DataLoader(object):
             # change axis order (see comments in valid_gen function) and yield images with labels
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
-                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(np.int32)
+                #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
+                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(np.float32).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by chunk_size
@@ -141,7 +142,7 @@ class DataLoader(object):
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(np.int32)
+            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(np.float32).reshape(len(images), 1)
 
     def _batch_iter_parallel(self, image_list, labels):
         batch_size = 128
