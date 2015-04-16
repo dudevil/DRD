@@ -8,17 +8,19 @@ import lasagne
 from lasagne import layers, regularization, nonlinearities
 from custom_layers import SliceRotateLayer, RotateMergeLayer, StochasticPoolLayer
 from load_dataset import DataLoader
+from sklearn.metrics import confusion_matrix
 from utils import *
+
 
 IMAGE_SIZE = 128
 BATCH_SIZE = 64
 LEARNING_RATE = 0.005
 MOMENTUM = 0.9
-MAX_EPOCH = 200
+MAX_EPOCH = 250
 
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=256)
+dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024, normalize=False)
 # get train data chunk and load it into GPU
 train_x, train_y = dloader.train_gen().next()
 num_train_batches = len(train_x) // BATCH_SIZE
@@ -36,7 +38,7 @@ valid_y = theano.shared(valid_y, borrow=True)
 print("Building model...")
 
 
-input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
+input = layers.InputLayer(shape=(BATCH_SIZE, 1, IMAGE_SIZE, IMAGE_SIZE))
 
 slicerot = SliceRotateLayer(input)
 
@@ -173,6 +175,7 @@ min_epochs = 50
 train_loss = []
 valid_loss = []
 kappa_loss = []
+conf_mat = np.array([])
 # wait for this many epochs if the validation error is not increasing
 patience = 10
 now = time.time()
@@ -183,7 +186,7 @@ print("|----------------------------------------------------------------------|"
 while epoch < MAX_EPOCH:
     epoch += 1
     # train the network on all chunks
-    batch_train_losses = []
+    batch_train_losses = [1.]
     for x_next, y_next in dloader.train_gen():
         # perform forward pass and parameters update
         for b in xrange(num_train_batches):
@@ -201,11 +204,10 @@ while epoch < MAX_EPOCH:
         for b in xrange(num_valid_batches):
             batch_valid_loss, prediction = iter_valid(b)
             batch_valid_losses.append(batch_valid_loss)
-            valid_predictions.extend(prediction)
+            valid_predictions.extend(prediction.ravel())
         valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
         valid_y.set_value(valid_y_next, borrow=True)
         num_valid_batches = len(valid_x_next) // BATCH_SIZE
-
     avg_valid_loss = np.mean(batch_valid_losses)
     c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
     print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
@@ -226,6 +228,8 @@ while epoch < MAX_EPOCH:
         # during early stages of learning
         if epoch >= min_epochs:
             save_network(all_layers)
+        conf_mat = confusion_matrix(dloader.valid_labels, valid_predictions)
+        imgs_error = images_byerror(valid_predictions, dloader.valid_labels.values, dloader.valid_images.values)
         best_valid = avg_valid_loss
         best_epoch = epoch
         patience = 10
@@ -236,6 +240,11 @@ while epoch < MAX_EPOCH:
         learning_rate.set_value(np.float32(0.001))
     if epoch == 150:
         learning_rate.set_value(np.float32(0.0005))
+    if epoch == 200:
+        learning_rate.set_value(np.float32(0.0002))
+    if epoch == 220:
+        learning_rate.set_value(np.float32(0.0001))
+
 
 
 print("The best weighted quadratic kappa: %.5f obtained on epoch %d.\n The training took %d seconds." %
@@ -243,3 +252,5 @@ print("The best weighted quadratic kappa: %.5f obtained on epoch %d.\n The train
 
 results = np.array([train_loss, valid_loss, kappa_loss], dtype=np.float)
 np.save("data/tidy/5conv_1dense.npy", results)
+np.save("data/tidy/confusion.npy", conf_mat)
+imgs_error.to_csv("data/tidy/imgs_error.csv")
