@@ -11,10 +11,13 @@ gray=${3:0}
 
 # Calculate LCN images
 # You already SHOULD HAVE file lists to this moment
+
+cd ${set_name}
+
 for lst in ../${set_name}_list_*;
 do
     echo $lst;
-    (while read line; do echo $line; ../trimmer $line ${line%png}_lcn.png ${kernel_size} ${gray}; done < $lst ) &
+    (while read line; do echo $line; ../lcn ${line%jpeg}png ${line%.jpeg}_lcn.png ${kernel_size} ${gray}; done < $lst ) &
 done;
 wait
 
