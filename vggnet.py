@@ -16,7 +16,7 @@ IMAGE_SIZE = 128
 BATCH_SIZE = 64
 LEARNING_RATE = 0.005
 MOMENTUM = 0.9
-MAX_EPOCH = 250
+MAX_EPOCH = 80
 
 
 print("Loading dataset...")
@@ -38,7 +38,7 @@ valid_y = theano.shared(valid_y, borrow=True)
 print("Building model...")
 
 
-input = layers.InputLayer(shape=(BATCH_SIZE, 1, IMAGE_SIZE, IMAGE_SIZE))
+input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 
 slicerot = SliceRotateLayer(input)
 
@@ -46,24 +46,24 @@ conv1 = layers.Conv2DLayer(slicerot,
                            num_filters=16,
                            filter_size=(11, 11),
                            W=lasagne.init.Normal())
-#pool1 = StochasticPoolLayer(conv1, ds=(3, 3))
-pool1 = layers.MaxPool2DLayer(conv1, ds=(3, 3))
+pool1 = StochasticPoolLayer(conv1, ds=(3, 3), strides=(2, 2))
+#pool1 = layers.MaxPool2DLayer(conv1, ds=(3, 3))
 
-conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
-conv2 = layers.Conv2DLayer(conv2_dropout,
+#conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
+conv2 = layers.Conv2DLayer(pool1,
                            num_filters=32,
                            filter_size=(4, 4),
                            W=lasagne.init.Normal())
-#pool2 = StochasticPoolLayer(conv2, ds=(3, 3))
-pool2 = layers.MaxPool2DLayer(conv2, ds=(2, 2))
+pool2 = StochasticPoolLayer(conv2, ds=(3, 3), strides=(2, 2))
+#pool2 = layers.MaxPool2DLayer(conv2, ds=(2, 2))
 
-conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.2)
-conv3 = layers.Conv2DLayer(conv3_dropout,
+#conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.2)
+conv3 = layers.Conv2DLayer(pool2,
                            num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Normal())
-#pool3 = StochasticPoolLayer(conv3, ds=(3, 3))
-pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
+pool3 = StochasticPoolLayer(conv3, ds=(3, 3), strides=(2, 2))
+#pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
 #
 # conv4 = layers.Conv2DLayer(pool3,
 #                            num_filters=128,
@@ -100,7 +100,7 @@ output = layers.DenseLayer(dense2_dropout,
                            nonlinearity=None)
 
 # collect layers to save them later
-all_layers = [input, slicerot, conv1, pool1, conv2_dropout, conv2, pool2, conv3_dropout, conv3, pool3, # conv4, pool4, conv5, pool5, conv6, pool6,
+all_layers = [input, slicerot, conv1, pool1, conv2, pool2, conv3, pool3, # conv4, pool4, conv5, pool5, conv6, pool6,
               merge, dense1, dense1_dropout, dense2, dense2_dropout, output]
 
 # allocate symbolic variables for theano graph computations
@@ -186,7 +186,7 @@ print("|----------------------------------------------------------------------|"
 while epoch < MAX_EPOCH:
     epoch += 1
     # train the network on all chunks
-    batch_train_losses = [1.]
+    batch_train_losses = []
     for x_next, y_next in dloader.train_gen():
         # perform forward pass and parameters update
         for b in xrange(num_train_batches):
@@ -208,6 +208,7 @@ while epoch < MAX_EPOCH:
         valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
         valid_y.set_value(valid_y_next, borrow=True)
         num_valid_batches = len(valid_x_next) // BATCH_SIZE
+
     avg_valid_loss = np.mean(batch_valid_losses)
     c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
     print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
@@ -240,11 +241,6 @@ while epoch < MAX_EPOCH:
         learning_rate.set_value(np.float32(0.001))
     if epoch == 150:
         learning_rate.set_value(np.float32(0.0005))
-    if epoch == 200:
-        learning_rate.set_value(np.float32(0.0002))
-    if epoch == 220:
-        learning_rate.set_value(np.float32(0.0001))
-
 
 
 print("The best weighted quadratic kappa: %.5f obtained on epoch %d.\n The training took %d seconds." %
