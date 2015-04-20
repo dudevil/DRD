@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
-from utils import lcn_image
+from utils import lcn_image, global_contrast_normalize
 from multiprocessing import Pool, cpu_count
 import theano
 
@@ -97,7 +97,7 @@ class DataLoader(object):
         # enhancer = ImageEnhance.Contrast(img)
         # factor = self.random.uniform(.5, 2.)
         # out = np.array(enhancer.enhance(factor), dtype=np.float32) / 255.
-        img = imread(image, as_grey=True)
+        img = imread(image) / 255.
         # flip verticaly with 1/2 probability
         if self.random.randint(2):
             img = img[::-1, ...]
@@ -109,7 +109,7 @@ class DataLoader(object):
 
     def _image_iterator(self, image_list, labels=None, transform=False):
         # allocate an array for images
-        images = np.zeros((self.chunk_size, self.image_size, self.image_size), dtype=theano.config.floatX)
+        images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
         n_images = len(image_list)
         n_chunks = n_images // self.chunk_size
         for chunk in xrange(n_chunks):
@@ -121,29 +121,29 @@ class DataLoader(object):
                 if transform:
                     images[i, ...] = self._transform(image)
                 else:
-                    images[i, ...] = imread(image, as_grey=True)
+                    images[i, ...] = imread(image) / 255.
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
-                yield lcn_image(images), labels[chunk_slice].values.astype(theano.config.floatX).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by chunk_size
         if n_images > chunk_end:
             imgs_left = n_images - chunk_end
-            images = np.zeros((imgs_left, self.image_size, self.image_size), dtype=theano.config.floatX)
+            images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
             for i, image in enumerate(self.train_images[chunk_end: n_images]):
                 if transform:
                     images[i, ...] = self._transform(image)
                 else:
-                    images[i, ...] = imread(image, as_grey=True)
+                    images[i, ...] = imread(image) / 255.
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield lcn_image(images), labels[chunk_end: n_images].values.astype(theano.config.floatX).reshape(len(images), 1)
+            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(theano.config.floatX).reshape(len(images), 1)
 
     def _batch_iter_parallel(self, image_list, labels):
         batch_size = 128

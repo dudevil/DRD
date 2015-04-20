@@ -140,14 +140,14 @@ def lecun_lcn(input, img_shape, kernel_shape, threshold=1e-4):
     centered_X = X - convout[:, :, mid:-mid, mid:-mid]
 
     # Scale down norm of 9x9 patch if norm is bigger than 1
-    sum_sqr_XX = conv.conv2d(input=X**2,
+    sum_sqr_XX = conv.conv2d(input=T.sqr(X),
                              filters=filters,
                              image_shape=(input.shape[0], 1, img_shape[0], img_shape[1]),
                              filter_shape=filter_shape,
                              border_mode='full')
 
     denom = T.sqrt(sum_sqr_XX[:, :, mid:-mid, mid:-mid])
-    per_img_mean = T.mean(T.flatten(denom, outdim=3), axis=2) #denom.mean(axis=[1, 2])
+    per_img_mean = T.mean(denom, axis=(1, 2))
     divisor = T.largest(per_img_mean.dimshuffle(0, 1, 'x', 'x'), denom)
     divisor = T.maximum(divisor, threshold)
 
@@ -183,3 +183,46 @@ def lcn_image(images, kernel_size=9):
             axis=1
         )
     return output
+
+
+def global_contrast_normalize(X, scale=1., subtract_mean=True, use_std=False,
+                              sqrt_bias=0., min_divisor=1e-8):
+    """ Code adopted from here: https://github.com/lisa-lab/pylearn2/blob/master/pylearn2/expr/preprocessing.py
+        but can work with b01c and bc01 orderings
+
+        An Analysis of Single-Layer
+       Networks in Unsupervised Feature Learning". AISTATS 14, 2011.
+       http://www.stanford.edu/~acoates/papers/coatesleeng_aistats_2011.pdf
+    """
+    assert X.ndim > 2, "X.ndim must be more than 2"
+    scale = float(scale)
+    assert scale >= min_divisor
+
+    # Note: this is per-example mean across pixels, not the
+    # per-pixel mean across examples. So it is perfectly fine
+    # to subtract this without worrying about whether the current
+    # object is the train, valid, or test set.
+    aggr_axis = tuple(np.arange(len(X.shape) - 1) + 1)
+    mean = np.mean(X, axis=aggr_axis, keepdims=True)
+    if subtract_mean:
+        X = X - mean[:, np.newaxis]  # Makes a copy.
+    else:
+        X = X.copy()
+
+    if use_std:
+        # ddof=1 simulates MATLAB's var() behaviour, which is what Adam
+        # Coates' code does.
+        ddof = 1
+
+        # If we don't do this, X.var will return nan.
+        if X.shape[1] == 1:
+            ddof = 0
+
+        normalizers = np.sqrt(sqrt_bias + np.var(X, axis=aggr_axis, ddof=ddof, keepdims=True)) / scale
+    else:
+        normalizers = np.sqrt(sqrt_bias + np.sum((X ** 2), axis=aggr_axis, keepdims=True)) / scale
+
+    # Don't normalize by anything too small.
+    normalizers[normalizers < min_divisor] = 1.
+    X /= normalizers[:, np.newaxis]  # Does not make a copy.
+    return X

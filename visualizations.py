@@ -27,3 +27,32 @@ def show_weights(layer, bias=True, filt=-1, color=False):
         if not filt:
             filt = np.random.randint(f[i].shape[0])
         ax.imshow(f[i][31], interpolation='none', cmap=cm)
+
+def pretty_print_confusion(conf_matrix, labels):
+    labels = tuple(labels)
+    print("   |    %d |    %d |    %d |    %d |    %d |" % labels)
+    print("---|------|------|------|------|------|")
+    for i, lab in enumerate(labels):
+        print(" %d | %4d | %4d | %4d | %4d | %4d |" % ((lab, ) + tuple(conf_matrix[i])))
+
+
+def plot_confusion_matrix(conf_matrix, labels=(0, 1, 2, 3, 4), normalize=True,
+                          title='Confusion matrix', cmap=plt.cm.Blues):
+    if normalize:
+        cm = conf_matrix.astype('float', copy=True) / conf_matrix.sum(axis=1)[:, np.newaxis]
+    else:
+        cm = conf_matrix
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(max(labels) + 1)
+    plt.xticks(tick_marks, labels, rotation=45)
+    plt.yticks(tick_marks, labels)
+    plt.tight_layout()
+    x_offset = -.25
+    y_offset = .08
+    for y in xrange(cm.shape[0]):
+        for x in xrange(cm.shape[1]):
+            plt.text(x + x_offset, y + y_offset, "%.2f" % cm[y,x])
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')

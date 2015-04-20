@@ -14,13 +14,13 @@ from utils import *
 
 IMAGE_SIZE = 128
 BATCH_SIZE = 64
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 250
+MAX_EPOCH = 100
 
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024, normalize=False)
+dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True)
 # get train data chunk and load it into GPU
 train_x, train_y = dloader.train_gen().next()
 num_train_batches = len(train_x) // BATCH_SIZE
@@ -38,7 +38,7 @@ valid_y = theano.shared(valid_y, borrow=True)
 print("Building model...")
 
 
-input = layers.InputLayer(shape=(BATCH_SIZE, 1, IMAGE_SIZE, IMAGE_SIZE))
+input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 
 slicerot = SliceRotateLayer(input)
 
@@ -52,7 +52,7 @@ pool1 = layers.MaxPool2DLayer(conv1, ds=(3, 3))
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
                            num_filters=32,
-                           filter_size=(4, 4),
+                           filter_size=(5, 5),
                            W=lasagne.init.Normal())
 #pool2 = StochasticPoolLayer(conv2, ds=(3, 3))
 pool2 = layers.MaxPool2DLayer(conv2, ds=(2, 2))
@@ -65,12 +65,13 @@ conv3 = layers.Conv2DLayer(conv3_dropout,
 #pool3 = StochasticPoolLayer(conv3, ds=(3, 3))
 pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
 #
-# conv4 = layers.Conv2DLayer(pool3,
+#
+# conv4 = layers.Conv2DLayer(conv3,
 #                            num_filters=128,
 #                            filter_size=(3, 3),
 #                            W=lasagne.init.Normal())
 # pool4 = layers.MaxPool2DLayer(conv4, ds=(2, 2))
-#
+# #
 # conv5 = layers.Conv2DLayer(pool4,
 #                            num_filters=256,
 #                            filter_size=(3, 3),
@@ -85,14 +86,19 @@ pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
 
 merge = RotateMergeLayer(pool3)
 
-dense1 = layers.DenseLayer(merge,
-                           num_units=512,
-                           W=lasagne.init.Normal())
+dense1a = layers.DenseLayer(merge,
+                            num_units=512,
+                            W=lasagne.init.Normal(),
+                            nonlinearity=None)
+dense1 = layers.FeaturePoolLayer(dense1a, ds=2)
 dense1_dropout = lasagne.layers.DropoutLayer(dense1, p=0.5)
 
-dense2 = layers.DenseLayer(dense1_dropout,
-                           num_units=512,
-                           W=lasagne.init.Normal())
+dense2a = layers.DenseLayer(dense1_dropout,
+                            num_units=512,
+                            W=lasagne.init.Normal(),
+                            nonlinearity=None)
+
+dense2 = layers.FeaturePoolLayer(dense2a, ds=2)
 dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 
 output = layers.DenseLayer(dense2_dropout,
@@ -100,8 +106,15 @@ output = layers.DenseLayer(dense2_dropout,
                            nonlinearity=None)
 
 # collect layers to save them later
-all_layers = [input, slicerot, conv1, pool1, conv2_dropout, conv2, pool2, conv3_dropout, conv3, pool3, # conv4, pool4, conv5, pool5, conv6, pool6,
-              merge, dense1, dense1_dropout, dense2, dense2_dropout, output]
+all_layers = [input,
+              slicerot,
+              conv1, pool1,
+              conv2_dropout, conv2, pool2,
+              conv3_dropout, conv3, pool3,
+              merge,
+              dense1a, dense1, dense1_dropout,
+              dense2a, dense2, dense2_dropout,
+              output]
 
 # allocate symbolic variables for theano graph computations
 batch_index = T.iscalar('batch_index')
@@ -166,11 +179,12 @@ iter_valid = theano.function(
 # keep track of networks best performance and save net configuration
 best_epoch = 0
 best_valid = 1.
+best_kappa = 0.
 # epoch and iteration counters
 epoch = 0
 _iter = 0
 # wait for at least this many epochs before saving the model
-min_epochs = 50
+min_epochs = 10
 # store these values for learning curves plotting
 train_loss = []
 valid_loss = []
@@ -186,7 +200,7 @@ print("|----------------------------------------------------------------------|"
 while epoch < MAX_EPOCH:
     epoch += 1
     # train the network on all chunks
-    batch_train_losses = [1.]
+    batch_train_losses = []
     for x_next, y_next in dloader.train_gen():
         # perform forward pass and parameters update
         for b in xrange(num_train_batches):
@@ -208,6 +222,7 @@ while epoch < MAX_EPOCH:
         valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
         valid_y.set_value(valid_y_next, borrow=True)
         num_valid_batches = len(valid_x_next) // BATCH_SIZE
+
     avg_valid_loss = np.mean(batch_valid_losses)
     c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
     print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
@@ -223,27 +238,36 @@ while epoch < MAX_EPOCH:
     kappa_loss.append(c_kappa)
     # if this is the best kappa obtained so far
     # save the model to make predictions on the test set
-    if avg_valid_loss < best_valid:
+    if c_kappa > best_kappa:
         # always wait for min_epochs, to avoid frequent saving
         # during early stages of learning
         if epoch >= min_epochs:
             save_network(all_layers)
         conf_mat = confusion_matrix(dloader.valid_labels, valid_predictions)
         imgs_error = images_byerror(valid_predictions, dloader.valid_labels.values, dloader.valid_images.values)
-        best_valid = avg_valid_loss
+        best_kappa = c_kappa
         best_epoch = epoch
         patience = 10
     else:
         #decrease patience
         patience -= 1
-    if epoch == 95:
+    if epoch == 30:
+        learning_rate.set_value(np.float32(0.01))
+    if epoch == 40:
+        learning_rate.set_value(np.float32(0.005))
+    if epoch == 50:
+        learning_rate.set_value(np.float32(0.002))
+    if epoch == 60:
         learning_rate.set_value(np.float32(0.001))
-    if epoch == 150:
+    if epoch == 70:
         learning_rate.set_value(np.float32(0.0005))
-    if epoch == 200:
+    if epoch == 80:
         learning_rate.set_value(np.float32(0.0002))
-    if epoch == 220:
+    if epoch == 90:
         learning_rate.set_value(np.float32(0.0001))
+
+
+
 
 
 
