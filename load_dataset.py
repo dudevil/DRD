@@ -6,12 +6,13 @@ import numpy as np
 from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
-from skimage import exposure
+from utils import lcn_image, global_contrast_normalize
 from multiprocessing import Pool, cpu_count
+import theano
 
 
 def read_files(image_file, image_size=224):
-    image = imread(image_file) / 255.
+    image = imread(image_file, as_grey=True)
     return image
 
 class DataLoader(object):
@@ -108,7 +109,7 @@ class DataLoader(object):
 
     def _image_iterator(self, image_list, labels=None, transform=False):
         # allocate an array for images
-        images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
+        images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
         n_images = len(image_list)
         n_chunks = n_images // self.chunk_size
         for chunk in xrange(n_chunks):
@@ -127,13 +128,13 @@ class DataLoader(object):
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
-                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(np.float32).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by chunk_size
         if n_images > chunk_end:
             imgs_left = n_images - chunk_end
-            images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=np.float32)
+            images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
             for i, image in enumerate(self.train_images[chunk_end: n_images]):
                 if transform:
                     images[i, ...] = self._transform(image)
@@ -142,7 +143,7 @@ class DataLoader(object):
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(np.float32).reshape(len(images), 1)
+            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(theano.config.floatX).reshape(len(images), 1)
 
     def _batch_iter_parallel(self, image_list, labels):
         batch_size = 128
@@ -150,7 +151,7 @@ class DataLoader(object):
         n_chunks = n_images // self.chunk_size
         last_slice = slice(0, self.chunk_size)
         i = b = 0
-        images = np.zeros((batch_size, self.image_size, self.image_size, 3))
+        images = np.zeros((batch_size, self.image_size, self.image_size))
         for image in self.pool.imap(read_files, image_list, 128):
             if i == batch_size:
                 if self.norm:
