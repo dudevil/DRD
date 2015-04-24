@@ -128,7 +128,7 @@ class DataLoader(object):
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
-                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype(theano.config.floatX).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by chunk_size
@@ -143,7 +143,7 @@ class DataLoader(object):
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype(theano.config.floatX).reshape(len(images), 1)
+            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
 
     def _batch_iter_parallel(self, image_list, labels):
         batch_size = 128

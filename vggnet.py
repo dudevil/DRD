@@ -16,11 +16,11 @@ IMAGE_SIZE = 128
 BATCH_SIZE = 64
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 100
+MAX_EPOCH = 200
 
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True)
+dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True, random_state=42)
 # get train data chunk and load it into GPU
 train_x, train_y = dloader.train_gen().next()
 num_train_batches = len(train_x) // BATCH_SIZE
@@ -102,8 +102,8 @@ dense2 = layers.FeaturePoolLayer(dense2a, ds=2)
 dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 
 output = layers.DenseLayer(dense2_dropout,
-                           num_units=1,
-                           nonlinearity=None)
+                           num_units=5,
+                           nonlinearity=nonlinearities.softmax)
 
 # collect layers to save them later
 all_layers = [input,
@@ -119,14 +119,14 @@ all_layers = [input,
 # allocate symbolic variables for theano graph computations
 batch_index = T.iscalar('batch_index')
 X_batch = T.tensor4('x')
-y_batch = T.fmatrix('y')
+y_batch = T.ivector('y')
 learning_rate = theano.shared(np.float32(LEARNING_RATE))
 
 batch_slice = slice(batch_index * BATCH_SIZE, (batch_index + 1) * BATCH_SIZE)
 
 # use mse objective for regression
 objective = lasagne.objectives.Objective(output,
-                                         loss_function=lasagne.objectives.mse)
+                                         loss_function=lasagne.objectives.categorical_crossentropy)
 
 loss_train = objective.get_loss(X_batch, target=y_batch) #+ 0.05 * (
     # regularization.l2(dense1) + regularization.l2(dense2) + regularization.l2(conv1) +
@@ -137,9 +137,9 @@ loss_eval = objective.get_loss(X_batch, target=y_batch,
 
 # calculates actual predictions to determine weighted kappa
 # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
-#pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
+pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
 
-pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
+#pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
 # collect all model parameters
 all_params = lasagne.layers.get_all_params(output)
 # generate parameter updates for SGD with Nesterov momentum
@@ -222,7 +222,6 @@ while epoch < MAX_EPOCH:
         valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
         valid_y.set_value(valid_y_next, borrow=True)
         num_valid_batches = len(valid_x_next) // BATCH_SIZE
-
     avg_valid_loss = np.mean(batch_valid_losses)
     c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
     print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
@@ -251,19 +250,19 @@ while epoch < MAX_EPOCH:
     else:
         #decrease patience
         patience -= 1
-    if epoch == 30:
-        learning_rate.set_value(np.float32(0.01))
-    if epoch == 40:
-        learning_rate.set_value(np.float32(0.005))
     if epoch == 50:
+        learning_rate.set_value(np.float32(0.01))
+    if epoch == 75:
+        learning_rate.set_value(np.float32(0.005))
+    if epoch == 100:
         learning_rate.set_value(np.float32(0.002))
-    if epoch == 60:
+    if epoch == 125:
         learning_rate.set_value(np.float32(0.001))
-    if epoch == 70:
+    if epoch == 150:
         learning_rate.set_value(np.float32(0.0005))
-    if epoch == 80:
+    if epoch == 175:
         learning_rate.set_value(np.float32(0.0002))
-    if epoch == 90:
+    if epoch == 190:
         learning_rate.set_value(np.float32(0.0001))
 
 
