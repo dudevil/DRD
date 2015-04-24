@@ -17,7 +17,7 @@ BATCH_SIZE = 64
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
 MAX_EPOCH = 200
-
+LEARNING_RATE_SCHEDULE = np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)
 
 print("Loading dataset...")
 dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True, random_state=42)
@@ -43,34 +43,33 @@ input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 slicerot = SliceRotateLayer(input)
 
 conv1 = layers.Conv2DLayer(slicerot,
-                           num_filters=16,
-                           filter_size=(11, 11),
-                           W=lasagne.init.Normal())
+                           num_filters=32,
+                           filter_size=(5, 5),
+                           W=lasagne.init.Orthogonal(gain='relu'))
 #pool1 = StochasticPoolLayer(conv1, ds=(3, 3))
 pool1 = layers.MaxPool2DLayer(conv1, ds=(3, 3))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
-                           num_filters=32,
+                           num_filters=64,
                            filter_size=(5, 5),
-                           W=lasagne.init.Normal())
+                           W=lasagne.init.Orthogonal(gain='relu'))
 #pool2 = StochasticPoolLayer(conv2, ds=(3, 3))
 pool2 = layers.MaxPool2DLayer(conv2, ds=(2, 2))
 
-conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.2)
+conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
 conv3 = layers.Conv2DLayer(conv3_dropout,
                            num_filters=64,
                            filter_size=(3, 3),
-                           W=lasagne.init.Normal())
+                           W=lasagne.init.Orthogonal(gain='relu'))
 #pool3 = StochasticPoolLayer(conv3, ds=(3, 3))
-pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
-#
-#
-# conv4 = layers.Conv2DLayer(conv3,
-#                            num_filters=128,
-#                            filter_size=(3, 3),
-#                            W=lasagne.init.Normal())
-# pool4 = layers.MaxPool2DLayer(conv4, ds=(2, 2))
+
+conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.1)
+conv4 = layers.Conv2DLayer(conv4_dropout,
+                           num_filters=128,
+                           filter_size=(3, 3),
+                           W=lasagne.init.Orthogonal(gain='relu'))
+pool4 = layers.MaxPool2DLayer(conv4, ds=(2, 2))
 # #
 # conv5 = layers.Conv2DLayer(pool4,
 #                            num_filters=256,
@@ -84,7 +83,7 @@ pool3 = layers.MaxPool2DLayer(conv3, ds=(2, 2))
 #                            W=lasagne.init.Normal())
 # pool6 = layers.MaxPool2DLayer(conv6, ds=(2, 2))
 
-merge = RotateMergeLayer(pool3)
+merge = RotateMergeLayer(pool4)
 
 dense1a = layers.DenseLayer(merge,
                             num_units=512,
@@ -110,7 +109,8 @@ all_layers = [input,
               slicerot,
               conv1, pool1,
               conv2_dropout, conv2, pool2,
-              conv3_dropout, conv3, pool3,
+              conv3_dropout, conv3,
+              conv4_dropout, conv4, pool4,
               merge,
               dense1a, dense1, dense1_dropout,
               dense2a, dense2, dense2_dropout,
@@ -198,6 +198,7 @@ print("|----------------------------------------------------------------------|"
 
 # get next chunks of data
 while epoch < MAX_EPOCH:
+    learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
     epoch += 1
     # train the network on all chunks
     batch_train_losses = []
@@ -250,23 +251,6 @@ while epoch < MAX_EPOCH:
     else:
         #decrease patience
         patience -= 1
-    if epoch == 50:
-        learning_rate.set_value(np.float32(0.01))
-    if epoch == 75:
-        learning_rate.set_value(np.float32(0.005))
-    if epoch == 100:
-        learning_rate.set_value(np.float32(0.002))
-    if epoch == 125:
-        learning_rate.set_value(np.float32(0.001))
-    if epoch == 150:
-        learning_rate.set_value(np.float32(0.0005))
-    if epoch == 175:
-        learning_rate.set_value(np.float32(0.0002))
-    if epoch == 190:
-        learning_rate.set_value(np.float32(0.0001))
-
-
-
 
 
 
