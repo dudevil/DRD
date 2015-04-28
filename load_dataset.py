@@ -33,19 +33,19 @@ class DataLoader(object):
         #labels.level = labels.level.clip(upper=1)
 
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=3072, random_state=random_state)
+        sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
         #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
-        #self.train_index = self.train_index[:1000]
+        self.train_index = self.train_index[:1000]
         # get train and validation labels
 
         self.train_labels = labels.level[self.train_index]
         self.valid_labels = labels.level[self.valid_index]
         # prepare train and test image files
         self.train_images = labels.image[self.train_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "resized", img + ".png"))
+                                                                 os.path.join("data", "train", "128_lcn", img + "_lcn.png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "resized", img + ".png"))
+                                                                 os.path.join("data", "train", "128_lcn", img + "_lcn.png"))
         self.test_images = [os.path.join(self.datadir, "test", "resized", img) for img in
                             os.listdir(os.path.join(self.datadir, "test", "resized"))]
 

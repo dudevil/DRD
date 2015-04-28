@@ -26,7 +26,7 @@ def show_weights(layer, bias=True, filt=-1, color=False):
         ax.set_yticks([])
         if not filt:
             filt = np.random.randint(f[i].shape[0])
-        ax.imshow(f[i][31], interpolation='none', cmap=cm)
+        ax.imshow(f[i].transpose(1, 2, 0), cmap=cm)
 
 def pretty_print_confusion(conf_matrix, labels):
     labels = tuple(labels)

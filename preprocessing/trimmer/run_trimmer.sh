@@ -7,7 +7,7 @@ set_name=${1:-train}
 output_size=${2:-512}
 
 # images per thread (default is 6000)
-batch_size=${3:-6000}
+batch_size=${3:-5000}
 
 # list of files in directory
 cd ${set_name}
