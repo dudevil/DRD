@@ -36,16 +36,16 @@ class DataLoader(object):
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
         #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
-        self.train_index = self.train_index[:1000]
+        # self.train_index = self.train_index[:1000]
         # get train and validation labels
 
         self.train_labels = labels.level[self.train_index]
         self.valid_labels = labels.level[self.valid_index]
         # prepare train and test image files
         self.train_images = labels.image[self.train_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "128_lcn", img + "_lcn.png"))
+                                                                 os.path.join("data", "train", "resized", img + ".png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "128_lcn", img + "_lcn.png"))
+                                                                 os.path.join("data", "train", "resized", img + ".png"))
         self.test_images = [os.path.join(self.datadir, "test", "resized", img) for img in
                             os.listdir(os.path.join(self.datadir, "test", "resized"))]
 
@@ -143,25 +143,10 @@ class DataLoader(object):
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
-            yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
-
-    def _batch_iter_parallel(self, image_list, labels):
-        batch_size = 128
-        n_images = len(image_list)
-        n_chunks = n_images // self.chunk_size
-        last_slice = slice(0, self.chunk_size)
-        i = b = 0
-        images = np.zeros((batch_size, self.image_size, self.image_size))
-        for image in self.pool.imap(read_files, image_list, 128):
-            if i == batch_size:
-                if self.norm:
-                    self.normalize(images)
-                yield np.rollaxis(images, 3, 1)[:, 1, ...], labels[b * batch_size: (b + 1) * batch_size].values.astype(np.int32)
-                i = 0
-                b += 1
-            images[i, ...] = image
-            i += 1
-        yield np.rollaxis(images[:i], 3, 1)[:, 1, ...], labels[b * batch_size: (b + 1) * batch_size].values.astype(np.int32)
+            if labels is not None:
+                yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
+            else:
+                yield np.rollaxis(images, 3, 1)
 
     def get_mean_std(self, images):
         mean = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
@@ -177,9 +162,3 @@ class DataLoader(object):
 
     def normalize(self, images):
         return (images - self.mean) / (self.std + 1e-5)
-
-    def _load_images(self):
-        images = np.zeros((4000, self.image_size, self.image_size, 3))
-        for i, img in enumerate(self.train_images):
-            images[i, ...] = imread(img) / 255.
-        return np.rollaxis(images, 3, 1), self.train_labels.values.astype(np.int32)
