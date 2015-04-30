@@ -13,16 +13,17 @@ from load_dataset import DataLoader
 from sklearn.metrics import confusion_matrix
 from utils import *
 
+import sys
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 100
+MAX_EPOCH = 150
 LEARNING_RATE_SCHEDULE = np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True, random_state=42)
+dloader = DataLoader(datadir='C:/workspace/projects/kaggle/retina-diabetic',image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024, normalize=False, random_state=42)
 # get train data chunk and load it into GPU
 train_x, train_y = dloader.train_gen().next()
 num_train_batches = len(train_x) // BATCH_SIZE
@@ -40,7 +41,7 @@ valid_y = theano.shared(valid_y, borrow=True)
 print("Building model...")
 
 
-input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
+input = layers.InputLayer(shape=(BATCH_SIZE, 4, IMAGE_SIZE, IMAGE_SIZE))
 
 slicerot = SliceRotateLayer(input)
 
@@ -219,14 +220,21 @@ try:
         batch_valid_losses = []
         valid_predictions = []
         # get prediction and error on validation set
+        #chunk_num = 0
         for valid_x_next, valid_y_next in dloader.valid_gen():
             for b in xrange(num_valid_batches):
                 batch_valid_loss, prediction = iter_valid(b)
                 batch_valid_losses.append(batch_valid_loss)
                 valid_predictions.extend(prediction.ravel())
+                #print("Batch %6d" % b)
+                #sys.stdout.flush()
             valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
             valid_y.set_value(valid_y_next, borrow=True)
             num_valid_batches = len(valid_x_next) // BATCH_SIZE
+            #print("Chunk %6d" % chunk_num)
+            #sys.stdout.flush()
+            #chunk_num += 1
+            
         avg_valid_loss = np.mean(batch_valid_losses)
         c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
         print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
