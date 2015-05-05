@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
-from utils import lcn_image, global_contrast_normalize
+from utils import lcn_image, global_contrast_normalize, to_ordinal
 from multiprocessing import Pool, cpu_count
 import theano
 
@@ -128,7 +128,7 @@ class DataLoader(object):
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
-                yield np.rollaxis(images, 3, 1), labels[chunk_slice].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_slice].values) #.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by chunk_size
@@ -144,7 +144,7 @@ class DataLoader(object):
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
             if labels is not None:
-                yield np.rollaxis(images, 3, 1), labels[chunk_end: n_images].values.astype('int32') #.astype(theano.config.floatX).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_end: n_images].values) #.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
 
