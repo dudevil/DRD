@@ -6,6 +6,11 @@ import numpy as np
 from lasagne import layers
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
+
+def leaky_relu(x, alpha=3.0):
+    return T.maximum(x, x * (1.0 / alpha))
+
+
 class SliceRotateLayer(layers.Layer):
 
     def __init__(self, incoming, name=None, patch_shape=(64, 64)):
