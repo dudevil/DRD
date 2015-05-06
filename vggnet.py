@@ -18,21 +18,27 @@ IMAGE_SIZE = 128
 BATCH_SIZE = 64
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 100
+MAX_EPOCH = 150
 LEARNING_RATE_SCHEDULE = np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True, random_state=42)
+dloader = DataLoader(image_size=IMAGE_SIZE,
+                     parallel=True,
+                     batch_size=BATCH_SIZE,
+                     normalize=True,
+                     random_state=42)
 # get train data chunk and load it into GPU
-train_x, train_y = dloader.train_gen().next()
-num_train_batches = len(train_x) // BATCH_SIZE
-train_x = theano.shared(lasagne.utils.floatX(train_x), borrow=True)
-train_y = theano.shared(train_y, borrow=True)
+#train_x, train_y = dloader.train_gen().next()
+x = np.zeros((BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX)
+y = np.zeros(BATCH_SIZE, dtype=np.int32)
+#num_train_batches = len(train_x) // BATCH_SIZE
+train_x = theano.shared(lasagne.utils.floatX(x), borrow=True)
+train_y = theano.shared(to_ordinal(y), borrow=True)
 # get validation data chunk and load it into GPU
-valid_x, valid_y = dloader.valid_gen().next()
-num_valid_batches = len(valid_x) // BATCH_SIZE
-valid_x = theano.shared(lasagne.utils.floatX(valid_x), borrow=True)
-valid_y = theano.shared(valid_y, borrow=True)
+#valid_x, valid_y = dloader.valid_gen().next()
+num_valid_batches = len(x) // BATCH_SIZE
+valid_x = theano.shared(lasagne.utils.floatX(x), borrow=True)
+valid_y = theano.shared(to_ordinal(y), borrow=True)
 
 #####################
 #  Build the model  #
@@ -102,8 +108,8 @@ dense2 = layers.FeaturePoolLayer(dense2a, 2)
 dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 
 output = layers.DenseLayer(dense2_dropout,
-                           num_units=5,
-                           nonlinearity=nonlinearities.softmax)
+                           num_units=4,
+                           nonlinearity=nonlinearities.sigmoid)
 
 # collect layers to save them later
 all_layers = [input,
@@ -121,14 +127,14 @@ all_layers = [input,
 # allocate symbolic variables for theano graph computations
 batch_index = T.iscalar('batch_index')
 X_batch = T.tensor4('x')
-y_batch = T.ivector('y')
+y_batch = T.fmatrix('y')
 learning_rate = theano.shared(np.float32(LEARNING_RATE))
 
 batch_slice = slice(batch_index * BATCH_SIZE, (batch_index + 1) * BATCH_SIZE)
 
 # use mse objective for regression
 objective = lasagne.objectives.Objective(output,
-                                         loss_function=lasagne.objectives.categorical_crossentropy)
+                                         loss_function=lasagne.objectives.mse)
 
 loss_train = objective.get_loss(X_batch, target=y_batch) #+ 0.05 * (
     # regularization.l2(dense1) + regularization.l2(dense2) + regularization.l2(conv1) +
@@ -139,7 +145,8 @@ loss_eval = objective.get_loss(X_batch, target=y_batch,
 
 # calculates actual predictions to determine weighted kappa
 # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
-pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
+#pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
+pred = T.gt(output.get_output(X_batch, deterministic=True), 0.5)
 
 #pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
 # collect all model parameters
@@ -159,18 +166,18 @@ for layer in all_layers:
 print("Compiling theano functions...")
 # create theano functions for calculating losses on train and validation sets
 iter_train = theano.function(
-    [batch_index], loss_train,
+    [], loss_train,
     updates=updates,
     givens={
-        X_batch: train_x[batch_slice],
-        y_batch: train_y[batch_slice],
+        X_batch: train_x,
+        y_batch: train_y,
         },
     )
 iter_valid = theano.function(
-    [batch_index], [loss_eval, pred],
+    [], [loss_eval, pred],
     givens={
-        X_batch: valid_x[batch_slice],
-        y_batch: valid_y[batch_slice],
+        X_batch: valid_x,
+        y_batch: valid_y,
         },
     )
 
@@ -207,28 +214,30 @@ try:
         # train the network on all chunks
         batch_train_losses = []
         for x_next, y_next in dloader.train_gen():
+            if len(x_next) != BATCH_SIZE:
+                # skip last "partial" batch
+                # this should be fixed
+                continue
             # perform forward pass and parameters update
-            for b in xrange(num_train_batches):
-                batch_train_loss = iter_train(b)
-                batch_train_losses.append(batch_train_loss)
             train_x.set_value(lasagne.utils.floatX(x_next), borrow=True)
-            train_y.set_value(y_next, borrow=True)
-            num_train_batches = int(np.ceil(len(x_next) / BATCH_SIZE))
+            train_y.set_value(to_ordinal(y_next), borrow=True)
+            batch_train_loss = iter_train()
+            batch_train_losses.append(batch_train_loss)
         avg_train_loss = np.mean(batch_train_losses)
         # validate the network on validation chunks
         batch_valid_losses = []
         valid_predictions = []
         # get prediction and error on validation set
         for valid_x_next, valid_y_next in dloader.valid_gen():
-            for b in xrange(num_valid_batches):
-                batch_valid_loss, prediction = iter_valid(b)
-                batch_valid_losses.append(batch_valid_loss)
-                valid_predictions.extend(prediction.ravel())
             valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
-            valid_y.set_value(valid_y_next, borrow=True)
-            num_valid_batches = len(valid_x_next) // BATCH_SIZE
+            valid_y.set_value(to_ordinal(valid_y_next), borrow=True)
+            batch_valid_loss, prediction = iter_valid()
+            batch_valid_losses.append(batch_valid_loss)
+            valid_predictions.extend(get_predictions(prediction, batch_size=BATCH_SIZE))
+            #num_valid_batches = len(valid_x_next) // BATCH_SIZE
         avg_valid_loss = np.mean(batch_valid_losses)
-        c_kappa = kappa(dloader.valid_labels, np.array(valid_predictions))
+        vp = np.array(valid_predictions)
+        c_kappa = kappa(dloader.valid_labels, vp)
         print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
               (epoch,
                avg_train_loss,
