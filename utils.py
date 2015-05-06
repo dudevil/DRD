@@ -101,6 +101,30 @@ def kappa(y_true, y_pred):
     return k
 
 
+def get_predictions(output, batch_size=64):
+    """
+    This function decodes the neural net output to predictions as described in
+    this paper: https://web.missouri.edu/~zwyw6/files/rank.pdf
+    :param minibatch:
+    :return:
+    """
+    assert len(output.shape) == 2
+    last = np.ones(output.shape[0], dtype=np.bool)
+    preds = np.zeros(output.shape[0], dtype=np.int8)
+
+    for col in output.T:
+        last = last & col
+        preds += last
+    return preds
+
+
+def to_ordinal(y, n_classes=4):
+    res = np.zeros((len(y), n_classes), dtype=theano.config.floatX)
+    for i, cls in enumerate(y):
+        res[i, :cls] = 1.
+    return res
+
+
 def gaussian_filter(kernel_shape):
     x = np.zeros((kernel_shape, kernel_shape), dtype=theano.config.floatX)
 
