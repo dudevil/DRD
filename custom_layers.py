@@ -83,5 +83,21 @@ class StochasticPoolLayer(layers.Layer):
         return T.cast(res, theano.config.floatX)
 
 
+class RandomizedReLu(layers.Layer):
 
+    def __init__(self, input_layer, a_min=3., a_max=8., random_state=42):
+        super(RandomizedReLu, self).__init__(input_layer)
+        self.a_min = a_min
+        self.a_max = a_max
+        self.rng = RandomStreams(seed=random_state)
+
+    def get_output_for(self, input, deterministic=False, **kwargs):
+        if deterministic:
+            res = T.maximum(input, 2 * input / (self.a_max - self.a_min))
+        else:
+            batch_size, channels, _, _ = self.get_output_shape()
+            a = self.rng.uniform(size=(batch_size, channels), low=self.a_min, high=self.a_max)
+            a = a.dimshuffle((0, 1, 'x', 'x'))
+            res = T.maximum(input, input / a)
+        return res
 
