@@ -101,6 +101,30 @@ def kappa(y_true, y_pred):
     return k
 
 
+def get_predictions(output, batch_size=64):
+    """
+    This function decodes the neural net output to predictions as described in
+    this paper: https://web.missouri.edu/~zwyw6/files/rank.pdf
+    :param minibatch:
+    :return:
+    """
+    assert len(output.shape) == 2
+    last = np.ones(output.shape[0], dtype=np.bool)
+    preds = np.zeros(output.shape[0], dtype=np.int8)
+
+    for col in output.T:
+        last = last & col
+        preds += last
+    return preds
+
+
+def to_ordinal(y, n_classes=4):
+    res = np.zeros((len(y), n_classes), dtype=theano.config.floatX)
+    for i, cls in enumerate(y):
+        res[i, :cls] = 1.
+    return res
+
+
 def gaussian_filter(kernel_shape):
     x = np.zeros((kernel_shape, kernel_shape), dtype=theano.config.floatX)
 
@@ -140,14 +164,14 @@ def lecun_lcn(input, img_shape, kernel_shape, threshold=1e-4):
     centered_X = X - convout[:, :, mid:-mid, mid:-mid]
 
     # Scale down norm of 9x9 patch if norm is bigger than 1
-    sum_sqr_XX = conv.conv2d(input= centered_X**2,
+    sum_sqr_XX = conv.conv2d(input=T.sqr(X),
                              filters=filters,
                              image_shape=(input.shape[0], 1, img_shape[0], img_shape[1]),
                              filter_shape=filter_shape,
                              border_mode='full')
 
     denom = T.sqrt(sum_sqr_XX[:, :, mid:-mid, mid:-mid])
-    per_img_mean = T.mean(T.flatten(denom, outdim=3), axis=2) #denom.mean(axis=[1, 2])
+    per_img_mean = T.mean(denom, axis=(1, 2))
     divisor = T.largest(per_img_mean.dimshuffle(0, 1, 'x', 'x'), denom)
     divisor = T.maximum(divisor, threshold)
 

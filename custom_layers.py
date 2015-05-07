@@ -6,28 +6,10 @@ import numpy as np
 from lasagne import layers
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
-# Can't import this from lasagne.pool
-def pool_output_length(input_length, ds, st, ignore_border=True, pad=0):
 
-    if input_length is None or ds is None:
-        return None
+def leaky_relu(x, alpha=3.0):
+    return T.maximum(x, x * (1.0 / alpha))
 
-    if ignore_border:
-        output_length = input_length + 2 * pad - ds + 1
-        output_length = (output_length + st - 1) // st
-
-    # output length calculation taken from:
-    # https://github.com/Theano/Theano/blob/master/theano/tensor/signal/downsample.py
-    else:
-        assert pad == 0
-
-        if st >= ds:
-            output_length = (input_length + st - 1) // st
-        else:
-            output_length = max(
-                0, (input_length - ds + st - 1) // st) + 1
-
-    return output_length
 
 class SliceRotateLayer(layers.Layer):
 
@@ -73,7 +55,6 @@ class StochasticPoolLayer(layers.Layer):
 
     def get_output_shape_for(self, input_shape):
         output_shape = list(input_shape)  # copy / convert to mutable list
-
         output_shape[2] = pool_output_length(input_shape[2],
                                              ds=self.ds[0],
                                              st=self.st[0],
@@ -119,9 +100,7 @@ class StochasticPoolLayer(layers.Layer):
                 window = T.set_subtensor(window[:, :, :, :, row_within_pool, col_within_pool], win_cell)
         # sum across pooling regions
         norm = window.sum(axis=[4, 5])
-        # avoid zero-division
         norm = T.switch(T.eq(norm, 0.0), 1.0, norm)
-        # normalize
         norm = window / norm.dimshuffle(0, 1, 2, 3, 'x', 'x')
 
         if deterministic:
@@ -134,5 +113,37 @@ class StochasticPoolLayer(layers.Layer):
 
         return T.cast(res, theano.config.floatX)
 
+
+class RandomizedReLu(layers.Layer):
+
+    def __init__(self, input_layer, a_min=3., a_max=8., random_state=42):
+        super(RandomizedReLu, self).__init__(input_layer)
+        self.a_min = a_min
+        self.a_max = a_max
+        self.rng = RandomStreams(seed=random_state)
+
+    def get_output_for(self, input, deterministic=False, **kwargs):
+        if deterministic:
+            res = T.maximum(input, 2 * input / (self.a_max - self.a_min))
+        else:
+            batch_size, channels, _, _ = self.get_output_shape()
+            a = self.rng.uniform(size=(batch_size, channels), low=self.a_min, high=self.a_max)
+            a = a.dimshuffle((0, 1, 'x', 'x'))
+            res = T.maximum(input, input / a)
+        return res
+
+
+class ParametrizedReLu(layers.Layer):
+
+    def __init__(self, input_layer, a_init=0.25):
+        super(ParametrizedReLu, self).__init__(input_layer)
+        self.input = input_layer
+        self.a = theano.shared(np.cast[theano.config.floatX](a_init), name='a')
+
+    def get_output_for(self, input, **kwargs):
+        return T.maximum(0, input) + self.a * T.minimum(0, input)
+
+    def get_bias_params(self):
+        return [self.a]
 
 
