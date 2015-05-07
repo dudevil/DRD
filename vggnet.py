@@ -8,7 +8,7 @@ import operator
 import lasagne
 from lasagne.layers import dnn
 from lasagne import layers, regularization, nonlinearities
-from custom_layers import SliceRotateLayer, RotateMergeLayer, leaky_relu, RandomizedReLu
+from custom_layers import SliceRotateLayer, RotateMergeLayer, ParametrizedReLu
 from load_dataset import DataLoader
 from sklearn.metrics import confusion_matrix
 from utils import *
@@ -48,44 +48,49 @@ conv1 = layers.Conv2DLayer(slicerot,
                            num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
-pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
+                           nonlinearity=None)
+conv1o = ParametrizedReLu(conv1)
+pool1 = dnn.MaxPool2DDNNLayer(conv1o, (3, 3), stride=(2, 2))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
-pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
+                           nonlinearity=None)
+conv2o = ParametrizedReLu(conv2)
+pool2 = dnn.MaxPool2DDNNLayer(conv2o, (3, 3), stride=(2, 2))
 
 conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
 conv3 = layers.Conv2DLayer(conv3_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
+                           nonlinearity=None)
+conv3o = ParametrizedReLu(conv3)
 
-conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.1)
+conv4_dropout = lasagne.layers.DropoutLayer(conv3o, p=0.1)
 conv4 = layers.Conv2DLayer(conv4_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
-pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
+                           nonlinearity=None)
+conv4o = ParametrizedReLu(conv4)
+pool4 = dnn.MaxPool2DDNNLayer(conv4o, (3, 3), stride=(2, 2))
 
 conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
 conv5 = layers.Conv2DLayer(conv5_dropout,
                            num_filters=256,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
+                           nonlinearity=None)
+conv5o = ParametrizedReLu(conv5)
 # conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
 # conv6 = layers.Conv2DLayer(conv6_dropout,
 #                            num_filters=256,
 #                            filter_size=(3, 3),
 #                            W=lasagne.init.Orthogonal(gain='relu'))
-pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
+pool6 = dnn.MaxPool2DDNNLayer(conv5o, (2, 2), stride=(2, 2))
 
 merge = RotateMergeLayer(pool6)
 
@@ -112,8 +117,8 @@ output = layers.DenseLayer(dense2_dropout,
 # collect layers to save them later
 all_layers = [input,
               slicerot,
-              conv1, pool1,
-              conv2_dropout, conv2, pool2,
+              conv1, conv1o, pool1,
+              conv2_dropout, conv2, conv2o, pool2,
               conv3_dropout, conv3,
               conv4_dropout, conv4, pool4,
               conv5_dropout, conv5, pool6,

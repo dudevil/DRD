@@ -106,3 +106,18 @@ class RandomizedReLu(layers.Layer):
             res = T.maximum(input, input / a)
         return res
 
+
+class ParametrizedReLu(layers.Layer):
+
+    def __init__(self, input_layer, a_init=0.25):
+        super(ParametrizedReLu, self).__init__(input_layer)
+        self.input = input_layer
+        self.a = theano.shared(np.cast[theano.config.floatX](a_init), name='a')
+
+    def get_output_for(self, input, **kwargs):
+        return T.maximum(0, input) + self.a * T.minimum(0, input)
+
+    def get_bias_params(self):
+        return [self.a]
+
+
