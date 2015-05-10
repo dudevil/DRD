@@ -8,7 +8,7 @@ import operator
 import lasagne
 from lasagne.layers import dnn
 from lasagne import layers, regularization, nonlinearities
-from custom_layers import SliceRotateLayer, RotateMergeLayer, ParametrizedReLu
+from custom_layers import SliceRotateLayer, RotateMergeLayer, FractionalPool2DLayer, StochasticPoolLayer
 from load_dataset import DataLoader
 from sklearn.metrics import confusion_matrix
 from utils import *
@@ -18,11 +18,11 @@ IMAGE_SIZE = 128
 BATCH_SIZE = 64
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
-MAX_EPOCH = 130
+MAX_EPOCH = 100
 LEARNING_RATE_SCHEDULE = np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)
 
 print("Loading dataset...")
-dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=1024*3, normalize=True, random_state=42)
+dloader = DataLoader(image_size=IMAGE_SIZE, n_jobs=0, chunk_size=64, normalize=True, random_state=42)
 # get train data chunk and load it into GPU
 train_x, train_y = dloader.train_gen().next()
 num_train_batches = len(train_x) // BATCH_SIZE
@@ -47,51 +47,46 @@ slicerot = SliceRotateLayer(input)
 conv1 = layers.Conv2DLayer(slicerot,
                            num_filters=64,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=None)
-conv1o = ParametrizedReLu(conv1)
-pool1 = dnn.MaxPool2DDNNLayer(conv1o, (3, 3), stride=(2, 2))
+                           W=lasagne.init.Orthogonal(gain='relu'))
+#pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
+pool1 = FractionalPool2DLayer(conv1, (np.sqrt(2), np.sqrt(2)))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=None)
-conv2o = ParametrizedReLu(conv2)
-pool2 = dnn.MaxPool2DDNNLayer(conv2o, (3, 3), stride=(2, 2))
+                           W=lasagne.init.Orthogonal(gain='relu'))
+pool2 = FractionalPool2DLayer(conv2, (np.sqrt(2), np.sqrt(2)))
+#pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
+#pool2 = StochasticPoolLayer(conv2, (2, 2))
 
 conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
 conv3 = layers.Conv2DLayer(conv3_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=None)
-conv3o = ParametrizedReLu(conv3)
+                           W=lasagne.init.Orthogonal(gain='relu'))
 
-conv4_dropout = lasagne.layers.DropoutLayer(conv3o, p=0.1)
+conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.1)
 conv4 = layers.Conv2DLayer(conv4_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=None)
-conv4o = ParametrizedReLu(conv4)
-pool4 = dnn.MaxPool2DDNNLayer(conv4o, (3, 3), stride=(2, 2))
+                           W=lasagne.init.Orthogonal(gain='relu'))
+pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
+#pool4 = FractionalPool2DLayer(conv4, (np.sqrt(2), np.sqrt(2)))
 
 conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
 conv5 = layers.Conv2DLayer(conv5_dropout,
                            num_filters=256,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=None)
-conv5o = ParametrizedReLu(conv5)
+                           W=lasagne.init.Orthogonal(gain='relu'))
+
 # conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
 # conv6 = layers.Conv2DLayer(conv6_dropout,
 #                            num_filters=256,
 #                            filter_size=(3, 3),
 #                            W=lasagne.init.Orthogonal(gain='relu'))
-pool6 = dnn.MaxPool2DDNNLayer(conv5o, (2, 2), stride=(2, 2))
-
+pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
+#pool6 = FractionalPool2DLayer(conv5, (np.sqrt(2), np.sqrt(2)))
 merge = RotateMergeLayer(pool6)
 
 dense1a = layers.DenseLayer(merge,
@@ -117,8 +112,8 @@ output = layers.DenseLayer(dense2_dropout,
 # collect layers to save them later
 all_layers = [input,
               slicerot,
-              conv1, conv1o, pool1,
-              conv2_dropout, conv2, conv2o, pool2,
+              conv1, pool1,
+              conv2_dropout, conv2, pool2,
               conv3_dropout, conv3,
               conv4_dropout, conv4, pool4,
               conv5_dropout, conv5, pool6,
@@ -149,7 +144,7 @@ loss_eval = objective.get_loss(X_batch, target=y_batch,
 # calculates actual predictions to determine weighted kappa
 # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
 #pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
-pred = T.gt(output.get_output(X_batch, deterministic=True), 0.5)
+pred = T.round(T.sum(output.get_output(X_batch, deterministic=True), axis=1))
 
 #pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
 # collect all model parameters
@@ -234,7 +229,7 @@ try:
             for b in xrange(num_valid_batches):
                 batch_valid_loss, prediction = iter_valid(b)
                 batch_valid_losses.append(batch_valid_loss)
-                valid_predictions.extend(get_predictions(prediction, batch_size=BATCH_SIZE))
+                valid_predictions.extend(prediction)
             valid_x.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
             valid_y.set_value(valid_y_next, borrow=True)
             num_valid_batches = len(valid_x_next) // BATCH_SIZE

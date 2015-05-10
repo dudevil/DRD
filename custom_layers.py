@@ -114,6 +114,84 @@ class StochasticPoolLayer(layers.Layer):
         return T.cast(res, theano.config.floatX)
 
 
+class FractionalPool2DLayer(layers.Layer):
+    """
+    Fractional pooling as described in http://arxiv.org/abs/1412.6071
+    Only the random overlapping mode is currently implemented.
+
+    Implementaion adopted from this pull-request: https://github.com/Lasagne/Lasagne/pull/171/files
+    """
+    def __init__(self, incoming, ds, pool_function=T.max, random_state=42, **kwargs):
+        super(FractionalPool2DLayer, self).__init__(incoming, **kwargs)
+        if type(ds) is not tuple:
+            raise ValueError("ds must be a tuple")
+        if (not 1 <= ds[0] <= 2) or (not 1 <= ds[1] <= 2):
+            raise ValueError("ds must be between 1 and 2")
+        self.ds = ds  # a tuple
+        self.rng = T.shared_randomstreams.RandomStreams(seed=random_state)
+        if len(self.input_shape) != 4:
+            raise ValueError("Only bc01 currently supported")
+        self.pool_function = pool_function
+        _, _, n_in0, n_in1 = self.input_shape
+        _, _, n_out0, n_out1 = self.get_output_shape()
+        self.a_init = np.array([2] * (n_in0 - n_out0) + [1] * (2 * n_out0 - n_in0), dtype=np.int8)
+        self.b_init = np.array([2] * (n_in1 - n_out1) + [1] * (2 * n_out1 - n_in1), dtype=np.int8)
+        self.a_shared = theano.shared(self.a_init, borrow=True)
+        self.b_shared = theano.shared(self.b_init, borrow=True)
+
+    def _theano_shuffled(self, input):
+        n = input.shape[0]
+        shuffled = T.permute_row_elements(input.T, self.rng.permutation(n=n)).T
+        return shuffled
+
+    def get_output_shape_for(self, input_shape):
+        output_shape = list(input_shape) # copy / convert to mutable list
+        output_shape[2] = int(np.ceil(float(output_shape[2]) / self.ds[0]))
+        output_shape[3] = int(np.ceil(float(output_shape[3]) / self.ds[1]))
+
+        return tuple(output_shape)
+
+    def get_output_for(self, input, **kwargs):
+        # _, _, n_in0, n_in1 = self.input_shape
+        # _, _, n_out0, n_out1 = self.get_output_shape()
+
+        # Variable stride across the input creates fractional reduction
+        # a = theano.shared(
+        #     np.array([2] * (n_in0 - n_out0) + [1] * (2 * n_out0 - n_in0), dtype=np.int8),
+        #     borrow=True)
+        # b = theano.shared(
+        #     np.array([2] * (n_in1 - n_out1) + [1] * (2 * n_out1 - n_in1), dtype=np.int8),
+        #     borrow=True)
+        self.a_shared.set_value(self.a_init, borrow=True)
+        self.b_shared.set_value(self.b_init, borrow=True)
+
+        a, b = self.a_shared, self.b_shared
+        # Randomize the input strides
+        a = self._theano_shuffled(a)
+        b = self._theano_shuffled(b)
+
+        # Convert to input positions, starting at 0
+        a = T.concatenate(([0], a[:-1]))
+        b = T.concatenate(([0], b[:-1]))
+        a = T.cumsum(a)
+        b = T.cumsum(b)
+
+        # Positions of the other corners
+        c = T.clip(a + 1, 0, self.input_shape[2] - 1)
+        d = T.clip(b + 1, 0, self.input_shape[3] - 1)
+
+        # Index the four positions in the pooling window and stack them
+        #shit won't fit in GPU memory
+        temp1 = self.pool_function(
+            T.stack(input[:, :, a, :][:, :, :, b],
+                    input[:, :, c, :][:, :, :, b]), axis=0)
+        temp2 = self.pool_function(
+            T.stack(input[:, :, a, :][:, :, :, d],
+                    input[:, :, c, :][:, :, :, d]), axis=0)
+
+        return self.pool_function(T.stack(temp1, temp2), axis=0)
+
+
 class RandomizedReLu(layers.Layer):
 
     def __init__(self, input_layer, a_min=3., a_max=8., random_state=42):
