@@ -7,90 +7,178 @@ from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
 from utils import lcn_image, global_contrast_normalize, to_ordinal
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, Process, Queue
+from functools import partial
 import theano
 
 
 def read_files(image_file, image_size=224):
-    image = imread(image_file, as_grey=True)
+    image = imread(image_file) / 255.
     return image
+
+def _transform(rng, image):
+    # img = Image.open(image)
+    # enhancer = ImageEnhance.Contrast(img)
+    # factor = self.random.uniform(.5, 2.)
+    # out = np.array(enhancer.enhance(factor), dtype=np.float32) / 255.
+    img = imread(image) / 255.
+    # flip verticaly with 1/2 probability
+    if rng.randint(2):
+        img = img[::-1, ...]
+    # flip horizontaly
+    if rng.randint(2):
+        img = img[:, ::-1, ...]
+    return img[np.newaxis, ...]
+
+
+class Worker(Process):
+
+    def __init__(self,
+                 images,
+                 labels,
+                 batch_queue,
+                 batch_size=64,
+                 random_state=42,
+                 mean=None,
+                 std=None,
+                 augment=False):
+        super(Worker, self).__init__()
+        assert len(images) == len(labels)
+        self.images = images
+        self.labels = labels
+        self.batch_size = batch_size
+        self.outqueue = batch_queue
+        self.rng = np.random.RandomState(random_state)
+        self.mean = mean
+        self.std = std
+        self.augment = augment
+
+    def _transform(self, image):
+        img = imread(image) / 255.
+        # normalize images if mean and std were specified
+        if self.mean is not None:
+            img -= self.mean
+        if self.std is not None:
+            img /= (self.std + 1e-5)
+        # flip verticaly with 1/2 probability
+        if self.augment:
+            if self.rng.randint(2):
+                img = img[::-1, ...]
+            # flip horizontaly
+            if self.rng.randint(2):
+                img = img[:, ::-1, ...]
+        return img[np.newaxis, ...]
+
+    def run(self):
+        while True:
+            # send images through queue in batches
+            for i in xrange(0, len(self.images), self.batch_size):
+                transformed = map(self._transform, self.images[i:i+self.batch_size])
+                transformed = np.vstack(transformed)
+                self.outqueue.put((np.rollaxis(transformed, 3, 1),
+                                   to_ordinal(self.labels[i:i+self.batch_size].values)))
+            # shuffle images at epoch end
+            shuffle_idx = self.rng.permutation(len(self.images))
+            self.images = self.images.iloc[shuffle_idx]
+            self.labels = self.labels.iloc[shuffle_idx]
+            # signal end of epoch
+            self.outqueue.put(None)
+
 
 class DataLoader(object):
 
     def __init__(self,
-                 datadir='data',
                  image_size=224,
-                 chunk_size=512,
                  random_state=0,
+                 batch_size=64,
+                 parallel=True,
                  normalize=True,
-                 n_jobs=3):
-        self.datadir = datadir
+                 datadir="data",
+                 train_path=os.path.join("train", "resized"),
+                 test_path=os.path.join("test", "resized"),):
+        train_path = os.path.join(datadir, train_path)
+        test_path = os.path.join(datadir, test_path)
         self.image_size = image_size
-        self.chunk_size = chunk_size
         self.norm = normalize
-
-        labels = pd.read_csv(os.path.join(self.datadir, "trainLabels.csv"))
-        #labels.level = labels.level.clip(upper=1)
+        self.random = np.random.RandomState(random_state)
+        self.batch_size = batch_size
+        self.parallel = parallel
+        labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
 
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
-        #sss = StratifiedKFold(labels.level, 10)
         self.train_index, self.valid_index = list(sss).pop()
         # self.train_index = self.train_index[:1000]
-        # get train and validation labels
 
+        # get train and validation labels
         self.train_labels = labels.level[self.train_index]
         self.valid_labels = labels.level[self.valid_index]
         # prepare train and test image files
         self.train_images = labels.image[self.train_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "resized", img + ".png"))
+                                                                 os.path.join(train_path, img + ".png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
-                                                                 os.path.join("data", "train", "resized", img + ".png"))
-        self.test_images = [os.path.join(self.datadir, "test", "resized", img) for img in
-                            os.listdir(os.path.join(self.datadir, "test", "resized"))]
+                                                                 os.path.join(train_path, img + ".png"))
+        self.test_images = [os.path.join(test_path, img) for img in os.listdir(test_path)]
 
         if self.norm:
             self.mean, self.std = self.get_mean_std(self.train_images)
+            # this code leads to a weird GPU-driver error needs further investigation
+            # mean_file = os.path.join(train_path, "mean.npy")
+            # std_file = os.path.join(train_path, "std.npy")
+            # # if we saved mean and std earlier grab them from files
+            # if os.path.isfile(mean_file) and os.path.isfile(std_file):
+            #     print("loading saved mean")
+            #     self.mean = np.load(mean_file)
+            #     self.std = np.load(std_file)
+            # else:
+            #     # calculate mean and std by iterating over the trainset
+            #     self.mean, self.std = self.get_mean_std(self.train_images)
+            #     # save mean and std for future use in this directory
+            #     np.save(mean_file, self.mean)
+            #     np.save(std_file, self.std)
+            #     print("calculated and saved")
+        else:
+            self.mean = self.std = None
 
-        self.n_jobs = cpu_count() if n_jobs == -1 else n_jobs
-        if self.n_jobs:
-            self.pool = Pool(self.n_jobs)
-        self.random = np.random.RandomState(random_state)
+        if parallel:
+            self.train_queue = Queue(10)
+            self.valid_queue = Queue(10)
+            # get mean and std across training set
 
+            self.train_worker = Worker(self.train_images,
+                                       self.train_labels,
+                                       self.train_queue,
+                                       batch_size=self.batch_size,
+                                       mean=self.mean,
+                                       std=self.std)
+            self.valid_worker = Worker(self.valid_images,
+                                       self.valid_labels,
+                                       self.valid_queue,
+                                       batch_size=self.batch_size,
+                                       mean=self.mean,
+                                       std=self.std,
+                                       augment=False)
+            self.train_worker.start()
+            self.valid_worker.start()
 
     def valid_gen(self):
-        if self.n_jobs:
-            return self._batch_iter_parallel(self.valid_images, self.valid_labels)
-        else:
-            return self._image_iterator(self.valid_images, labels=self.valid_labels)
+        if self.parallel:
+            return iter(self.valid_queue.get, None)
+        return self._image_iterator(self.valid_images, labels=self.valid_labels)
 
     def train_gen(self):
-        if self.n_jobs:
-            return self._batch_iter_parallel(self.train_images, self.train_labels)
+        if self.parallel:
+            return iter(self.train_queue.get, None)
         else:
-            return self._image_iterator(self.train_images, labels=self.train_labels, transform=True)
+            # shuffle images on each epoch
+            shuffle_idx = self.random.permutation(len(self.train_labels))
+            return self._image_iterator(self.train_images.iloc[shuffle_idx],
+                                        labels=self.train_labels.iloc[shuffle_idx],
+                                        transform=True)
 
     def test_gen(self):
         return self._image_iterator(self.test_images)
-        # will leave this as a backup :)
-        # images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=np.float32)
-        # n_chunks = int(np.ceil(len(self.test_images) * 1. / self.chunk_size))
-        # for chunk in xrange(n_chunks):
-        #     # prepare a slice of images to read during this pass
-        #     chunk_end = (chunk + 1) * self.chunk_size
-        #     # we need this to get images if the test set is not divisible by chunk_size
-        #     if len(self.test_images) < chunk_end:
-        #         images = np.zeros((len(self.test_images) - chunk * self.chunk_size,
-        #                            self.image_size, self.image_size, 3))
-        #         chunk_end = len(self.test_images)
-        #     chunk_slice = slice(chunk * self.chunk_size, chunk_end)
-        #     # read a chunk of images
-        #     for i, image in enumerate(self.test_images[chunk_slice]):
-        #         images[i, ...] = imread(image) / 255.
-        #     if self.norm:
-        #         self.normalize(images)
-        #     # change axis order (see comments in valid_gen function) and yield images with labels
-        #     yield np.rollaxis(images, 3, 1)
+
 
     def _transform(self, image):
         # img = Image.open(image)
@@ -106,16 +194,15 @@ class DataLoader(object):
             img = img[:, ::-1, ...]
         return img
 
-
     def _image_iterator(self, image_list, labels=None, transform=False):
         # allocate an array for images
-        images = np.zeros((self.chunk_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
+        images = np.zeros((self.batch_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
         n_images = len(image_list)
-        n_chunks = n_images // self.chunk_size
+        n_chunks = n_images // self.batch_size
         for chunk in xrange(n_chunks):
             # prepare a slice of images to read during this pass
-            chunk_end = (chunk + 1) * self.chunk_size
-            chunk_slice = slice(chunk * self.chunk_size, chunk_end)
+            chunk_end = (chunk + 1) * self.batch_size
+            chunk_slice = slice(chunk * self.batch_size, chunk_end)
             # read a chunk of images
             for i, image in enumerate(image_list[chunk_slice]):
                 if transform:
@@ -128,10 +215,10 @@ class DataLoader(object):
             if labels is not None:
                 # transform labels to a collumn, but first we need to add a new axis
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
-                yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_slice].values) #.astype(theano.config.floatX).reshape(len(images), 1)
+                yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_slice].values)
             else:
                 yield np.rollaxis(images, 3, 1)
-        # we need to this if the train set size is not divisible by chunk_size
+        # we need to this if the train set size is not divisible by batch_size
         if n_images > chunk_end:
             imgs_left = n_images - chunk_end
             images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
@@ -147,6 +234,12 @@ class DataLoader(object):
                 yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_end: n_images].values) #.astype(theano.config.floatX).reshape(len(images), 1)
             else:
                 yield np.rollaxis(images, 3, 1)
+
+    def cleanup(self):
+        # terminate the worker processes
+        if self.parallel:
+            self.train_worker.terminate()
+            self.valid_worker.terminate()
 
     def get_mean_std(self, images):
         mean = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
