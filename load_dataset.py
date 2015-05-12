@@ -77,10 +77,11 @@ class Worker(Process):
                 transformed = np.vstack(transformed)
                 self.outqueue.put((np.rollaxis(transformed, 3, 1),
                                    to_ordinal(self.labels[i:i+self.batch_size].values)))
-            # shuffle images at epoch end
-            shuffle_idx = self.rng.permutation(len(self.images))
-            self.images = self.images.iloc[shuffle_idx]
-            self.labels = self.labels.iloc[shuffle_idx]
+            # shuffle images at epoch end do this for trainig set only
+            if self.augment:
+                shuffle_idx = self.rng.permutation(len(self.images))
+                self.images = self.images.iloc[shuffle_idx]
+                self.labels = self.labels.iloc[shuffle_idx]
             # signal end of epoch
             self.outqueue.put(None)
 
