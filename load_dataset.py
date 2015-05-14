@@ -151,7 +151,8 @@ class DataLoader(object):
                                        self.train_queue,
                                        batch_size=self.batch_size,
                                        mean=self.mean,
-                                       std=self.std)
+                                       std=self.std,
+                                       augment=True)
             self.valid_worker = Worker(self.valid_images,
                                        self.valid_labels,
                                        self.valid_queue,
