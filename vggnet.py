@@ -8,13 +8,13 @@ import operator
 import lasagne
 from lasagne.layers import dnn
 from lasagne import layers, regularization, nonlinearities
-from custom_layers import SliceRotateLayer, RotateMergeLayer, leaky_relu
+from custom_layers import SliceRotateLayer, RotateMergeLayer, leaky_relu, FractionalPool2DLayer
 from load_dataset import DataLoader
 from utils import *
 
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
 MAX_EPOCH = 130
@@ -29,25 +29,25 @@ dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=
 print("Building model...")
 
 input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
-input_dropout = lasagne.layers.DropoutLayer(input, p=0.1)
 
-slicerot = SliceRotateLayer(input_dropout)
+slicerot = SliceRotateLayer(input)
 
 conv1 = layers.Conv2DLayer(slicerot,
                            num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
-pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
+#pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
+pool1 = FractionalPool2DLayer(conv1, ds=(np.sqrt(2), np.sqrt(2)))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = layers.Conv2DLayer(conv2_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu,
-                           )
-pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
+                           nonlinearity=leaky_relu)
+#pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
+pool2 = FractionalPool2DLayer(conv2, ds=(np.sqrt(2), np.sqrt(2)))
 
 conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
 conv3 = layers.Conv2DLayer(conv3_dropout,
@@ -55,65 +55,64 @@ conv3 = layers.Conv2DLayer(conv3_dropout,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
+pool5 = FractionalPool2DLayer(conv3, ds=(np.sqrt(2), np.sqrt(2)))
 
-conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.1)
-conv4 = layers.Conv2DLayer(conv3,
+conv4_dropout = lasagne.layers.DropoutLayer(pool5, p=0.1)
+conv4 = layers.Conv2DLayer(conv4_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
-pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
+pool4 = FractionalPool2DLayer(conv4, ds=(np.sqrt(2), np.sqrt(2)))
+#pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
 
 conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
 conv5 = layers.Conv2DLayer(conv5_dropout,
                            num_filters=256,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu,
-                           border_mode='same')
-
-conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
-conv6 = layers.Conv2DLayer(conv6_dropout,
-                           num_filters=256,
-                           filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           border_mode='same')
-pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
+                           nonlinearity=leaky_relu)
+# conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
+# conv6 = layers.Conv2DLayer(conv6_dropout,
+#                            num_filters=256,
+#                            filter_size=(3, 3),
+#                            W=lasagne.init.Orthogonal(gain='relu'))
+pool6 = FractionalPool2DLayer(conv5, ds=(np.sqrt(2), np.sqrt(2)))
+#pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
 
 merge = RotateMergeLayer(pool6)
 
-dense1_dropout = lasagne.layers.DropoutLayer(merge, p=0.5)
-dense1a = layers.DenseLayer(dense1_dropout,
+dense1a = layers.DenseLayer(merge,
                             num_units=2048,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
 dense1 = layers.FeaturePoolLayer(dense1a, 2)
+dense1_dropout = lasagne.layers.DropoutLayer(dense1, p=0.5)
 
-dense2_dropout = lasagne.layers.DropoutLayer(dense1, p=0.5)
-dense2a = layers.DenseLayer(dense2_dropout,
+dense2a = layers.DenseLayer(dense1_dropout,
                             num_units=2048,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
-dense2 = layers.FeaturePoolLayer(dense2a, 2)
 
-out_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
-output = layers.DenseLayer(out_dropout,
+dense2 = layers.FeaturePoolLayer(dense2a, 2)
+dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
+
+output = layers.DenseLayer(dense2_dropout,
                            num_units=4,
                            nonlinearity=nonlinearities.sigmoid)
 
 # collect layers to save them later
-all_layers = [input, input_dropout,
+all_layers = [input,
               slicerot,
               conv1, pool1,
               conv2_dropout, conv2, pool2,
-              conv3_dropout, conv3,
+              conv3_dropout, conv3, pool5,
               conv4_dropout, conv4, pool4,
-              conv5_dropout, conv5,
-              conv6_dropout, conv6,
+              conv5_dropout, conv5, pool6,
               merge,
-              dense1_dropout, dense1a, dense1,
-              dense2_dropout, dense2a, dense2,
-              out_dropout, output]
+              dense1a, dense1, dense1_dropout,
+              dense2a, dense2, dense2_dropout,
+              output]
 
 # allocate symbolic variables for theano graph computations
 batch_index = T.iscalar('batch_index')
@@ -207,21 +206,21 @@ try:
     while epoch < MAX_EPOCH:
         learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
         epoch += 1
-        # set up lists for losses
+        # train the network on all chunks
         batch_train_losses = []
-        batch_valid_losses = []
-        valid_predictions = []
-
-        # perfrom forward pass and parameter updates
         for x_next, y_next in dloader.train_gen():
-            # if partial batch received ignore it
+            # perform forward pass and parameters update
             if not len(x_next) == BATCH_SIZE:
                 continue
             x_shared.set_value(lasagne.utils.floatX(x_next), borrow=True)
             y_shared.set_value(y_next, borrow=True)
             batch_train_loss = iter_train()
             batch_train_losses.append(batch_train_loss)
-
+            #num_train_batches = int(np.ceil(len(x_next) / BATCH_SIZE))
+        avg_train_loss = np.mean(batch_train_losses)
+        # validate the network on validation chunks
+        batch_valid_losses = []
+        valid_predictions = []
         # get prediction and error on validation set
         for valid_x_next, valid_y_next in dloader.valid_gen():
             #print valid_y_next
@@ -230,8 +229,7 @@ try:
             batch_valid_loss, prediction = iter_valid()
             batch_valid_losses.append(batch_valid_loss)
             valid_predictions.extend(get_predictions(prediction, batch_size=BATCH_SIZE))
-
-        avg_train_loss = np.mean(batch_train_losses)
+            #num_valid_batches = len(valid_x_next) // BATCH_SIZE
         avg_valid_loss = np.mean(batch_valid_losses)
         vp = np.array(valid_predictions)
         c_kappa = kappa(dloader.valid_labels, vp)

@@ -42,21 +42,33 @@ class RotateMergeLayer(layers.Layer):
 
 class StochasticPoolLayer(layers.Layer):
 
-    def __init__(self, incoming, ds, strides=None, ignore_border=False, random_state=42, **kwargs):
+    def __init__(self, incoming, ds, strides=None, ignore_border=False, pad=(0, 0), random_state=42, **kwargs):
         super(StochasticPoolLayer, self).__init__(incoming, **kwargs)
         self.ds = ds
         self.ignore_border = ignore_border
-        self.strides = strides if strides is not None else ds
+        self.pad = pad
+        self.st = ds if strides is None else strides
         if hasattr(random_state, 'multinomial'):
             self.rng = random_state
         else:
             self.rng = RandomStreams(seed=random_state)
 
     def get_output_shape_for(self, input_shape):
-        output_shape = list(input_shape)
-        # this assumes bc01 input ordering
-        output_shape[2] = (input_shape[2] - self.ds[0]) // self.strides[0] + 1
-        output_shape[3] = (input_shape[3] - self.ds[1]) // self.strides[1] + 1
+        output_shape = list(input_shape)  # copy / convert to mutable list
+        output_shape[2] = pool_output_length(input_shape[2],
+                                             ds=self.ds[0],
+                                             st=self.st[0],
+                                             ignore_border=self.ignore_border,
+                                             pad=self.pad[0],
+                                             )
+
+        output_shape[3] = pool_output_length(input_shape[3],
+                                             ds=self.ds[1],
+                                             st=self.st[1],
+                                             ignore_border=self.ignore_border,
+                                             pad=self.pad[1],
+                                             )
+
         return tuple(output_shape)
 
     def get_output_for(self, input, deterministic=False, **kwargs):
@@ -64,16 +76,29 @@ class StochasticPoolLayer(layers.Layer):
         # https://github.com/lisa-lab/pylearn2/blob/14b2f8bebce7cc938cfa93e640008128e05945c1/pylearn2/expr/stochastic_pool.py#L23
         batch, channels, nr, nc = self.input_shape
         pr, pc = self.ds
-        sr, sc = self.strides
+        sr, sc = self.st
+        output_shape = self.get_output_shape()
+        out_r, out_c = output_shape[2:]
+        # calculate shape needed for padding
+        pad_shape = list(output_shape)
+        pad_shape[2] = (pad_shape[2] - 1) * sr + pr
+        pad_shape[3] = (pad_shape[3] - 1) * sc + pc
+        # allocate a new input tensor
+        padded = T.alloc(0.0, *pad_shape)
+        # get padding offset
+        offset_x = (pad_shape[2] - nr) // 2
+        offset_y = (pad_shape[3] - nc) // 2
 
-        out_r, out_c = self.get_output_shape_for(self.input_shape)[2:]
-
+        padded = T.set_subtensor(padded[:, :, offset_x:(offset_x + nr), offset_y:(offset_y + nc)], input)
         window = T.alloc(0.0, batch, channels, out_r, out_c, pr, pc)
-        for row_within_pool in xrange(out_r):
-            for col_within_pool in xrange(out_c):
-                win_cell = input[:, :, row_within_pool:out_r * sr:sr, col_within_pool:out_c * sc:sc]
+        for row_within_pool in xrange(pr):
+            row_stop = (output_shape[2] - 1) * sr + row_within_pool + 1
+            for col_within_pool in xrange(pc):
+                col_stop = (output_shape[3] - 1) * sc + col_within_pool + 1
+                # theano dark magic
+                win_cell = padded[:, :, row_within_pool:row_stop:sr, col_within_pool:col_stop:sc]
                 window = T.set_subtensor(window[:, :, :, :, row_within_pool, col_within_pool], win_cell)
-
+        # sum across pooling regions
         norm = window.sum(axis=[4, 5])
         norm = T.switch(T.eq(norm, 0.0), 1.0, norm)
         norm = window / norm.dimshuffle(0, 1, 2, 3, 'x', 'x')
@@ -82,10 +107,87 @@ class StochasticPoolLayer(layers.Layer):
             res = (window * norm).sum(axis=[4, 5])
         else:
             prob = self.rng.multinomial(pvals=norm.reshape((batch * channels * out_r * out_c, pr * pc)),
-                                        dtype='float32')
+                                        dtype=theano.config.floatX)
+            # double max because of grad problems
             res = (window * prob.reshape((batch, channels, out_r, out_c,  pr, pc))).max(axis=5).max(axis=4)
 
         return T.cast(res, theano.config.floatX)
+
+
+class FractionalPool2DLayer(layers.Layer):
+    """
+    Fractional pooling as described in http://arxiv.org/abs/1412.6071
+    Only the random overlapping mode is currently implemented.
+
+    Implementaion adopted from this pull-request: https://github.com/Lasagne/Lasagne/pull/171/files
+    """
+    def __init__(self, incoming, ds, pool_function=T.max, random_state=42, **kwargs):
+        super(FractionalPool2DLayer, self).__init__(incoming, **kwargs)
+        if type(ds) is not tuple:
+            raise ValueError("ds must be a tuple")
+        if (not 1 <= ds[0] <= 2) or (not 1 <= ds[1] <= 2):
+            raise ValueError("ds must be between 1 and 2")
+        self.ds = ds  # a tuple
+        self.rng = T.shared_randomstreams.RandomStreams(seed=random_state)
+        if len(self.input_shape) != 4:
+            raise ValueError("Only bc01 currently supported")
+        self.pool_function = pool_function
+        _, _, n_in0, n_in1 = self.input_shape
+        _, _, n_out0, n_out1 = self.get_output_shape()
+        self.a_init = np.array([2] * (n_in0 - n_out0) + [1] * (2 * n_out0 - n_in0), dtype=np.int8)
+        self.b_init = np.array([2] * (n_in1 - n_out1) + [1] * (2 * n_out1 - n_in1), dtype=np.int8)
+        self.a_shared = theano.shared(self.a_init, borrow=True)
+        self.b_shared = theano.shared(self.b_init, borrow=True)
+
+    def _theano_shuffled(self, input):
+        n = input.shape[0]
+        shuffled = T.permute_row_elements(input.T, self.rng.permutation(n=n)).T
+        return shuffled
+
+    def get_output_shape_for(self, input_shape):
+        output_shape = list(input_shape) # copy / convert to mutable list
+        output_shape[2] = int(np.ceil(float(output_shape[2]) / self.ds[0]))
+        output_shape[3] = int(np.ceil(float(output_shape[3]) / self.ds[1]))
+
+        return tuple(output_shape)
+
+    def get_output_for(self, input, **kwargs):
+        # _, _, n_in0, n_in1 = self.input_shape
+        # _, _, n_out0, n_out1 = self.get_output_shape()
+
+        # Variable stride across the input creates fractional reduction
+        # a = theano.shared(
+        #     np.array([2] * (n_in0 - n_out0) + [1] * (2 * n_out0 - n_in0), dtype=np.int8),
+        #     borrow=True)
+        # b = theano.shared(
+        #     np.array([2] * (n_in1 - n_out1) + [1] * (2 * n_out1 - n_in1), dtype=np.int8),
+        #     borrow=True)
+        self.a_shared.set_value(self.a_init, borrow=True)
+        self.b_shared.set_value(self.b_init, borrow=True)
+
+        a, b = self.a_shared, self.b_shared
+        # Randomize the input strides
+        a = self._theano_shuffled(a)
+        b = self._theano_shuffled(b)
+
+        # Convert to input positions, starting at 0
+        a = T.concatenate(([0], a[:-1]))
+        b = T.concatenate(([0], b[:-1]))
+        a = T.cumsum(a)
+        b = T.cumsum(b)
+
+        # Positions of the other corners
+        c = T.clip(a + 1, 0, self.input_shape[2] - 1)
+        d = T.clip(b + 1, 0, self.input_shape[3] - 1)
+
+        # Index the four positions in the pooling window and stack them
+        #shit won't fit in GPU memory
+        temp = T.stack(input[:, :, a, :][:, :, :, b],
+                       input[:, :, c, :][:, :, :, b],
+                       input[:, :, a, :][:, :, :, d],
+                       input[:, :, c, :][:, :, :, d])
+
+        return self.pool_function(temp, axis=0)
 
 
 class RandomizedReLu(layers.Layer):
