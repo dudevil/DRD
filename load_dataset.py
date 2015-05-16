@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
+from skimage.transform import rotate
 from utils import lcn_image, global_contrast_normalize, to_ordinal
 from multiprocessing import Pool, cpu_count, Process, Queue
 from functools import partial
@@ -60,8 +61,9 @@ class Worker(Process):
             img -= self.mean
         if self.std is not None:
             img /= (self.std + 1e-5)
-        # flip verticaly with 1/2 probability
         if self.augment:
+            img = rotate(img, self.rng.randint(-30, 30))
+            # flip verticaly with 1/2 probability
             if self.rng.randint(2):
                 img = img[::-1, ...]
             # flip horizontaly
