@@ -10,3 +10,16 @@ data/*.csv
 *.jpg
 data/submissions/
 data/tidy
+
+# Windows specific
+preprocessing/*/Debug/*
+preprocessing/*/Release/*
+*.db
+*.suo
+*.sln
+*.ilk
+*.pdb
+*.exe
+*.lib
+*.sdf
+*.vcxproj*
