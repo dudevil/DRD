@@ -126,6 +126,7 @@ y_shared = theano.shared(np.zeros((BATCH_SIZE, 4), dtype=theano.config.floatX),
                          borrow=True)
 learning_rate = theano.shared(np.float32(LEARNING_RATE))
 
+batch_slice = slice(batch_index * BATCH_SIZE, (batch_index + 1) * BATCH_SIZE)
 
 # use mse objective for regression
 objective = lasagne.objectives.Objective(output,
