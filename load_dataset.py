@@ -42,6 +42,9 @@ class Worker(Process):
                  random_state=42,
                  mean=None,
                  std=None,
+                 pseudo_images='',
+                 pseudo_labels='',
+                 proportion=0.,
                  augment=False):
         super(Worker, self).__init__()
         assert len(images) == len(labels)
@@ -53,6 +56,19 @@ class Worker(Process):
         self.mean = mean
         self.std = std
         self.augment = augment
+        if proportion:
+            assert len(pseudo_images) == len(pseudo_labels)
+            self.pseudo_images = images
+            self.pseudo_labels = pseudo_labels
+            if isinstance(proportion, float):
+                self.n_pseudo = int(self.batch_size * proportion)
+            elif isinstance(proportion, int):
+                self.n_pseudo = proportion
+            else:
+                raise ValueError("Pseudo-labels proportion must be either a float or an int.")
+        else:
+            self.n_pseudo = 0
+
 
     def _transform(self, image):
         img = imread(image) / 255.
@@ -62,7 +78,7 @@ class Worker(Process):
         if self.std is not None:
             img /= (self.std + 1e-5)
         if self.augment:
-            img = rotate(img, self.rng.randint(-30, 30))
+            #img = rotate(img, self.rng.randint(-30, 30))
             # flip verticaly with 1/2 probability
             if self.rng.randint(2):
                 img = img[::-1, ...]
@@ -72,13 +88,25 @@ class Worker(Process):
         return img[np.newaxis, ...]
 
     def run(self):
+        n_true = self.batch_size - self.n_pseudo
+        if self.n_pseudo:
+            test_idx = np.arange(len(self.pseudo_images))
         while True:
             # send images through queue in batches
-            for i in xrange(0, len(self.images), self.batch_size):
-                transformed = map(self._transform, self.images[i:i+self.batch_size])
-                transformed = np.vstack(transformed)
-                self.outqueue.put((np.rollaxis(transformed, 3, 1),
-                                   to_ordinal(self.labels[i:i+self.batch_size].values)))
+            for i in xrange(0, len(self.images), n_true):
+                # read real train images
+                batch = map(self._transform, self.images[i: i + n_true])
+                if self.n_pseudo:
+                    pseudo_idx = self.rng.choice(test_idx, self.n_pseudo)
+                    batch.extend(map(self._transform, self.pseudo_images.iloc[pseudo_idx]))
+                    labels = np.vstack((
+                        to_ordinal(self.labels[i: i + n_true].values),
+                        self.pseudo_labels[pseudo_idx].astype(theano.config.floatX)
+                    ))
+                else:
+                    labels = to_ordinal(self.labels[i: i + n_true].values)
+                batch = np.vstack(batch)
+                self.outqueue.put((np.rollaxis(batch, 3, 1), labels))
             # shuffle images at epoch end do this for trainig set only
             if self.augment:
                 shuffle_idx = self.rng.permutation(len(self.images))
@@ -98,7 +126,7 @@ class DataLoader(object):
                  normalize=True,
                  datadir="data",
                  train_path=os.path.join("train", "resized"),
-                 test_path=os.path.join("test", "resized"),):
+                 test_path=os.path.join("test", "trimmed"),):
         train_path = os.path.join(datadir, train_path)
         test_path = os.path.join(datadir, test_path)
         self.image_size = image_size
@@ -122,6 +150,10 @@ class DataLoader(object):
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
         self.test_images = [os.path.join(test_path, img) for img in os.listdir(test_path)]
+        pseudos = pd.read_csv("data/submissions/submission_90.csv")
+        self.pseudo_images = pseudos.iloc[:, 0].apply(lambda img: os.path.join(test_path, img + ".png"))
+        self.pseudo_labels = pseudos.iloc[:, 1:].values
+
 
         if self.norm:
             self.mean, self.std = self.get_mean_std(self.train_images)
@@ -151,6 +183,9 @@ class DataLoader(object):
             self.train_worker = Worker(self.train_images,
                                        self.train_labels,
                                        self.train_queue,
+                                       # pseudo_images=self.pseudo_images,
+                                       # pseudo_labels=self.pseudo_labels,
+                                       # proportion=0.05,
                                        batch_size=self.batch_size,
                                        mean=self.mean,
                                        std=self.std,
