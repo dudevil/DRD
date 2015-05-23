@@ -154,7 +154,6 @@ class DataLoader(object):
         self.pseudo_images = pseudos.iloc[:, 0].apply(lambda img: os.path.join(test_path, img + ".png"))
         self.pseudo_labels = pseudos.iloc[:, 1:].values
 
-
         if self.norm:
             self.mean, self.std = self.get_mean_std(self.train_images)
             # this code leads to a weird GPU-driver error needs further investigation

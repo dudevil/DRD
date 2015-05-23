@@ -16,13 +16,12 @@ from utils import *
 import sys
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
 MAX_EPOCH = 130
-#LEARNING_RATE_SCHEDULE = np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)
-LEARNING_RATE_SCHEDULE = {110: 0.001,
-                          120: 0.0005}
+LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
+
 
 print("Loading dataset...")
 dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, train_path="train/trimmed")
@@ -66,14 +65,16 @@ conv4 = layers.Conv2DLayer(conv4_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
+                           nonlinearity=leaky_relu,
+                           border_mode='same')
 
 conv5_dropout = lasagne.layers.DropoutLayer(conv4, p=0.1)
 conv5 = layers.Conv2DLayer(conv5_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
+                           nonlinearity=leaky_relu,
+                           border_mode='same')
 pool4 = dnn.MaxPool2DDNNLayer(conv5, (3, 3), stride=(2, 2))
 
 conv6_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
@@ -95,26 +96,26 @@ conv8 = layers.Conv2DLayer(conv8_dropout,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            border_mode='same')
-pool6 = dnn.MaxPool2DDNNLayer(conv8, (2, 2), stride=(2, 2))
+pool6 = dnn.MaxPool2DDNNLayer(conv8, (3, 3), stride=(2, 2))
 
 merge = RotateMergeLayer(pool6)
 
 dense1_dropout = layers.DropoutLayer(merge, p=0.5)
 dense1a = layers.DenseLayer(dense1_dropout,
-                            num_units=2048,
+                            num_units=1024,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
 dense1 = layers.FeaturePoolLayer(dense1a, 2)
 
 dense2_dropout = layers.DropoutLayer(dense1, p=0.5)
-dense2a = layers.DenseLayer(dense1_dropout,
-                            num_units=2048,
+dense2a = layers.DenseLayer(dense2_dropout,
+                            num_units=1024,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
 dense2 = layers.FeaturePoolLayer(dense2a, 2)
 
 output_dropout = layers.DropoutLayer(dense2, p=0.5)
-output = layers.DenseLayer(dense2_dropout,
+output = layers.DenseLayer(output_dropout,
                            num_units=4,
                            nonlinearity=nonlinearities.sigmoid)
 
@@ -153,10 +154,16 @@ learning_rate = theano.shared(np.float32(LEARNING_RATE))
 objective = lasagne.objectives.Objective(output,
                                          loss_function=lasagne.objectives.mse)
 
-loss_train = objective.get_loss(X_batch, target=y_batch) #+ 0.05 * (
-    # regularization.l2(dense1) + regularization.l2(dense2) + regularization.l2(conv1) +
-    # regularization.l2(conv2) + regularization.l2(conv3)
-#)
+# add progressive regularization
+layers_regularize = [conv1, conv2, conv3, conv4, conv5, conv6, conv7, conv8,
+                                            dense1a, dense2a, output]
+l2reg = 0.05
+
+loss_train = objective.get_loss(X_batch, target=y_batch)
+
+for i, layer in enumerate(layers_regularize, 1):
+    loss_train += i * 0.005 * regularization.l2(layers_regularize)
+
 loss_eval = objective.get_loss(X_batch, target=y_batch,
                                deterministic=True)
 
