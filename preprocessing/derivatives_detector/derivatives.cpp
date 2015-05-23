@@ -4,7 +4,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <iputils/lcn.hpp>
+#include <iputils/derivatives.hpp>
 
 int main(int const argc, char const* const argv[])
 {
@@ -12,7 +12,7 @@ int main(int const argc, char const* const argv[])
 	if (argc != 5) {
 		std::cout
 			<< "usage:" << std::endl
-			<< "./trimmer <input file> <output file> <kernel size> <as_gray>" << std::endl;
+			<< "./derivatives <input file> <output file> <kernel size> <as_gray>" << std::endl;
 		return EXIT_FAILURE;
 	}
 	std::string const input_filename(argv[1]);
@@ -29,7 +29,7 @@ int main(int const argc, char const* const argv[])
 		img.convertTo(img, CV_64FC3, 1.0 / 255.0);
 	}
 	
-	cv::Mat normalized = normalize_local_contrast(img, k_size);
+	cv::Mat normalized = detect_ridges(img, k_size);
 
 	cv::imwrite(output_filename, normalized * 255.0);
 	return EXIT_SUCCESS;
