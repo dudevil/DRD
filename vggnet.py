@@ -13,9 +13,10 @@ from load_dataset import DataLoader
 from sklearn.metrics import confusion_matrix
 from utils import *
 
+import sys
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 LEARNING_RATE = 0.02
 MOMENTUM = 0.9
 MAX_EPOCH = 130
@@ -26,6 +27,7 @@ LEARNING_RATE_SCHEDULE = {110: 0.001,
 print("Loading dataset...")
 dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, train_path="train/trimmed")
 
+
 #####################
 #  Build the model  #
 #####################
@@ -33,69 +35,85 @@ print("Building model...")
 
 input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 
+
 slicerot = SliceRotateLayer(input)
 
 conv1 = layers.Conv2DLayer(slicerot,
-                           num_filters=64,
+                           num_filters=32,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
 pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
 
-#conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
-conv2 = layers.Conv2DLayer(pool1,
-                           num_filters=128,
-                           filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
-pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
-
-#conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
-conv3 = layers.Conv2DLayer(pool2,
-                           num_filters=128,
+conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
+conv2 = layers.Conv2DLayer(conv2_dropout,
+                           num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
 
-#conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.1)
-conv4 = layers.Conv2DLayer(conv3,
+conv3_dropout = lasagne.layers.DropoutLayer(conv2, p=0.1)
+conv3 = layers.Conv2DLayer(conv3_dropout,
+                           num_filters=64,
+                           filter_size=(3, 3),
+                           W=lasagne.init.Orthogonal(gain='relu'),
+                           nonlinearity=leaky_relu)
+
+pool2 = dnn.MaxPool2DDNNLayer(conv3, (3, 3), stride=(2, 2))
+
+conv4_dropout = lasagne.layers.DropoutLayer(pool2, p=0.1)
+conv4 = layers.Conv2DLayer(conv4_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
-pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
 
-#conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
-conv5 = layers.Conv2DLayer(pool4,
+conv5_dropout = lasagne.layers.DropoutLayer(conv4, p=0.1)
+conv5 = layers.Conv2DLayer(conv5_dropout,
+                           num_filters=128,
+                           filter_size=(3, 3),
+                           W=lasagne.init.Orthogonal(gain='relu'),
+                           nonlinearity=leaky_relu)
+pool4 = dnn.MaxPool2DDNNLayer(conv5, (3, 3), stride=(2, 2))
+
+conv6_dropout = lasagne.layers.DropoutLayer(pool4, p=0.1)
+conv6 = layers.Conv2DLayer(conv6_dropout,
                            num_filters=256,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
-# conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
-# conv6 = layers.Conv2DLayer(conv6_dropout,
-#                            num_filters=256,
-#                            filter_size=(3, 3),
-#                            W=lasagne.init.Orthogonal(gain='relu'))
-pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
+                           nonlinearity=leaky_relu,
+                           border_mode='same')
+conv7_dropout = lasagne.layers.DropoutLayer(conv6, p=0.1)
+conv7 = layers.Conv2DLayer(conv7_dropout,
+                           num_filters=256,
+                           filter_size=(3, 3),
+                           W=lasagne.init.Orthogonal(gain='relu'),
+                           border_mode='same')
+conv8_dropout = lasagne.layers.DropoutLayer(conv7, p=0.1)
+conv8 = layers.Conv2DLayer(conv8_dropout,
+                           num_filters=256,
+                           filter_size=(3, 3),
+                           W=lasagne.init.Orthogonal(gain='relu'),
+                           border_mode='same')
+pool6 = dnn.MaxPool2DDNNLayer(conv8, (2, 2), stride=(2, 2))
 
 merge = RotateMergeLayer(pool6)
 
-dense1a = layers.DenseLayer(merge,
+dense1_dropout = layers.DropoutLayer(merge, p=0.5)
+dense1a = layers.DenseLayer(dense1_dropout,
                             num_units=2048,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
-
 dense1 = layers.FeaturePoolLayer(dense1a, 2)
-dense1_dropout = lasagne.layers.DropoutLayer(dense1, p=0.5)
 
+dense2_dropout = layers.DropoutLayer(dense1, p=0.5)
 dense2a = layers.DenseLayer(dense1_dropout,
                             num_units=2048,
                             W=lasagne.init.Normal(),
                             nonlinearity=None)
-
 dense2 = layers.FeaturePoolLayer(dense2a, 2)
-dense2_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 
+output_dropout = layers.DropoutLayer(dense2, p=0.5)
 output = layers.DenseLayer(dense2_dropout,
                            num_units=4,
                            nonlinearity=nonlinearities.sigmoid)
@@ -104,14 +122,18 @@ output = layers.DenseLayer(dense2_dropout,
 all_layers = [input,
               slicerot,
               conv1, pool1,
-              conv2, pool2,
-              conv3,
-              conv4, pool4,
-              conv5, pool6,
+              conv2_dropout, conv2,
+              conv3_dropout, conv3, pool2,
+              conv4_dropout, conv4,
+              conv5_dropout, conv5, pool4,
+              conv6_dropout, conv6,
+              conv7_dropout, conv7,
+              conv8_dropout, conv8, pool6,
               merge,
-              dense1a, dense1, dense1_dropout,
-              dense2a, dense2, dense2_dropout,
-              output]
+              dense1_dropout, dense1a, dense1,
+              dense2_dropout, dense2a, dense2,
+              output_dropout, output]
+
 print_network(all_layers)
 
 # allocate symbolic variables for theano graph computations
@@ -126,7 +148,6 @@ y_shared = theano.shared(np.zeros((BATCH_SIZE, 4), dtype=theano.config.floatX),
                          borrow=True)
 learning_rate = theano.shared(np.float32(LEARNING_RATE))
 
-batch_slice = slice(batch_index * BATCH_SIZE, (batch_index + 1) * BATCH_SIZE)
 
 # use mse objective for regression
 objective = lasagne.objectives.Objective(output,
@@ -217,6 +238,7 @@ try:
         batch_valid_losses = []
         valid_predictions = []
         # get prediction and error on validation set
+        #chunk_num = 0
         for valid_x_next, valid_y_next in dloader.valid_gen():
             #print valid_y_next
             x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
@@ -225,6 +247,7 @@ try:
             batch_valid_losses.append(batch_valid_loss)
             valid_predictions.extend(get_predictions(prediction, batch_size=BATCH_SIZE))
             #num_valid_batches = len(valid_x_next) // BATCH_SIZE
+
         avg_valid_loss = np.mean(batch_valid_losses)
         vp = np.array(valid_predictions)
         c_kappa = kappa(dloader.valid_labels, vp)

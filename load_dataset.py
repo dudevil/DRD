@@ -69,7 +69,6 @@ class Worker(Process):
         else:
             self.n_pseudo = 0
 
-
     def _transform(self, image):
         img = imread(image) / 255.
         # normalize images if mean and std were specified
@@ -122,6 +121,7 @@ class DataLoader(object):
                  image_size=224,
                  random_state=0,
                  batch_size=64,
+                 pseudo_proportion=0.,
                  parallel=True,
                  normalize=True,
                  datadir="data",
@@ -179,17 +179,25 @@ class DataLoader(object):
             self.train_queue = Queue(10)
             self.valid_queue = Queue(10)
             # get mean and std across training set
-
-            self.train_worker = Worker(self.train_images,
-                                       self.train_labels,
-                                       self.train_queue,
-                                       pseudo_images=self.pseudo_images,
-                                       pseudo_labels=self.pseudo_labels,
-                                       proportion=0.5,
-                                       batch_size=self.batch_size,
-                                       mean=self.mean,
-                                       std=self.std,
-                                       augment=True)
+            if pseudo_proportion:
+                self.train_worker = Worker(self.train_images,
+                                           self.train_labels,
+                                           self.train_queue,
+                                           pseudo_images=self.pseudo_images,
+                                           pseudo_labels=self.pseudo_labels,
+                                           proportion=0.05,
+                                           batch_size=self.batch_size,
+                                           mean=self.mean,
+                                           std=self.std,
+                                           augment=True)
+            else:
+                self.train_worker = Worker(self.train_images,
+                                           self.train_labels,
+                                           self.train_queue,
+                                           batch_size=self.batch_size,
+                                           mean=self.mean,
+                                           std=self.std,
+                                           augment=True)
             self.valid_worker = Worker(self.valid_images,
                                        self.valid_labels,
                                        self.valid_queue,
@@ -217,7 +225,6 @@ class DataLoader(object):
 
     def test_gen(self):
         return self._image_iterator(self.test_images)
-
 
     def _transform(self, image):
         # img = Image.open(image)
