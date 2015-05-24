@@ -10,6 +10,81 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 def leaky_relu(x, alpha=3.0):
     return T.maximum(x, x * (1.0 / alpha))
 
+# Partition image into square chunks of equal size
+class ImagePartitionLayer(layers.Layer):
+
+    def __init__(self, incoming, image_side_ = 1024, patch_side_ = 128, name = None):
+        super(ImagePartitionLayer, self).__init__(incoming, name)
+        self.patch_side = patch_side_
+        self.image_side = image_side_
+        print("ImagePartitionLayer:patch_side: " + str(self.patch_side))
+        print("ImagePartitionLayer:image_side: " + str(self.image_side))
+        print("ImagePartitionLayer:image_side_: " + str(image_side_))
+        
+
+    def get_output_shape_for(self, input_shape):
+        patches_per_side = self.image_side / self.patch_side
+        print("patches_per_side: " + str(patches_per_side))
+        out_shape = (input_shape[0] * patches_per_side * patches_per_side, input_shape[1], self.patch_side, self.patch_side)
+        print('ImagePartitionLayer:get_output_shape_for')
+        print(out_shape)              
+        return out_shape
+
+    def get_output_for(self, input, **kwargs):
+        print('ImagePartitionLayer:get_output_for')
+        print(theano.tensor.shape(input))
+        patches_per_side = self.image_side / self.patch_side
+        patches_count = patches_per_side * patches_per_side        
+        
+        parts = range(patches_count)
+        for x in range(patches_count):
+            i = x % patches_per_side * self.patch_side
+            j = x / patches_per_side * self.patch_side
+            i1 = i
+            i2 = i + self.patch_side
+            j1 = j
+            j2 = j + self.patch_side
+            parts[x] = input[i1:i2, j1:j2]
+
+        return T.concatenate(parts, axis=0)   
+
+# Assemble image from square chunks
+class ImageAssembleLayer(layers.Layer):
+
+    def __init__(self, incoming, image_side = 1024, patch_side = 128, name = None):
+        super(ImageAssembleLayer, self).__init__(incoming, name)
+        self.patch_side = patch_side
+        self.image_side = image_side
+
+    def get_output_shape_for(self, input_shape):
+        self.patches_per_side = (self.image_side / self.patch_side)
+        out_shape = (input_shape[0] / (self.patches_per_side * self.patches_per_side), np.prod(input_shape[1:]) * (self.patches_per_side * self.patches_per_side))
+        print('ImageAssembleLayer:get_output_shape_for')
+        print(np.array(input_shape))
+        print(out_shape)
+        return out_shape
+
+    def get_output_for(self, input, **kwargs):
+        print('ImageAssembleLayer:get_output_for')
+        print(theano.tensor.shape(input))
+
+        print('ImagePartitionLayer:get_output_for')
+        print(theano.tensor.shape(input))
+        patches_per_side = self.image_side / self.patch_side
+        patches_count = patches_per_side * patches_per_side        
+        
+        parts = range(patches_count)
+        for x in range(patches_count):
+            i = x % patches_per_side * self.patch_side
+            j = x / patches_per_side * self.patch_side
+            i1 = i
+            i2 = i + self.patch_side
+            j1 = j
+            j2 = j + self.patch_side
+            parts[x] = input[i1:i2, j1:j2]
+
+        return T.concatenate(parts, axis=0)   
+        return input.reshape(self.get_output_shape())
 
 class SliceRotateLayer(layers.Layer):
 
