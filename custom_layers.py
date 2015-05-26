@@ -17,36 +17,25 @@ class ImagePartitionLayer(layers.Layer):
         super(ImagePartitionLayer, self).__init__(incoming, name)
         self.patch_side = patch_side_
         self.image_side = image_side_
-        print("ImagePartitionLayer:patch_side: " + str(self.patch_side))
-        print("ImagePartitionLayer:image_side: " + str(self.image_side))
-        print("ImagePartitionLayer:image_side_: " + str(image_side_))
+        self.patches_per_side = self.image_side / self.patch_side
+        self.patches_count = self.patches_per_side * self.patches_per_side
         
+    def image_partition(self, image):
+        parts = [None] * self.patches_count
+        for x in range(self.patches_count):
+            i1 = x % self.patches_per_side * self.patch_side
+            i2 = i1 + self.patch_side
+            j1 = x / self.patches_per_side * self.patch_side
+            j2 = j1 + self.patch_side
+            parts[x] = image[:, j1:j2, i1:i2].reshape((1,image.shape[0],self.patch_side,self.patch_side))
+        return T.concatenate(parts, axis=0)   
 
     def get_output_shape_for(self, input_shape):
-        patches_per_side = self.image_side / self.patch_side
-        print("patches_per_side: " + str(patches_per_side))
-        out_shape = (input_shape[0] * patches_per_side * patches_per_side, input_shape[1], self.patch_side, self.patch_side)
-        print('ImagePartitionLayer:get_output_shape_for')
-        print(out_shape)              
+        out_shape = (input_shape[0] * self.patches_per_side * self.patches_per_side, input_shape[1], self.patch_side, self.patch_side)
         return out_shape
 
     def get_output_for(self, input, **kwargs):
-        print('ImagePartitionLayer:get_output_for')
-        print(theano.tensor.shape(input))
-        patches_per_side = self.image_side / self.patch_side
-        patches_count = patches_per_side * patches_per_side        
-        
-        parts = range(patches_count)
-        for x in range(patches_count):
-            i = x % patches_per_side * self.patch_side
-            j = x / patches_per_side * self.patch_side
-            i1 = i
-            i2 = i + self.patch_side
-            j1 = j
-            j2 = j + self.patch_side
-            parts[x] = input[i1:i2, j1:j2]
-
-        return T.concatenate(parts, axis=0)   
+        return T.concatenate([self.image_partition(input[i]) for i in range(self.input_shape[0])], axis = 0)
 
 # Assemble image from square chunks
 class ImageAssembleLayer(layers.Layer):
@@ -55,36 +44,26 @@ class ImageAssembleLayer(layers.Layer):
         super(ImageAssembleLayer, self).__init__(incoming, name)
         self.patch_side = patch_side
         self.image_side = image_side
+        self.patches_per_side = self.image_side / self.patch_side
+        self.patches_count = self.patches_per_side * self.patches_per_side
 
     def get_output_shape_for(self, input_shape):
         self.patches_per_side = (self.image_side / self.patch_side)
-        out_shape = (input_shape[0] / (self.patches_per_side * self.patches_per_side), np.prod(input_shape[1:]) * (self.patches_per_side * self.patches_per_side))
-        print('ImageAssembleLayer:get_output_shape_for')
-        print(np.array(input_shape))
-        print(out_shape)
+        out_shape = (input_shape[0] / (self.patches_per_side * self.patches_per_side), input_shape[1], input_shape[2] * self.patches_per_side, input_shape[3] * self.patches_per_side)
         return out_shape
 
-    def get_output_for(self, input, **kwargs):
-        print('ImageAssembleLayer:get_output_for')
-        print(theano.tensor.shape(input))
-
-        print('ImagePartitionLayer:get_output_for')
-        print(theano.tensor.shape(input))
-        patches_per_side = self.image_side / self.patch_side
-        patches_count = patches_per_side * patches_per_side        
+    def get_chunks(self, l, n):
+        """ Yield successive n-sized chunks from l."""
+        for i in xrange(0, len(l), n):
+            yield l[i:i+n]
         
-        parts = range(patches_count)
-        for x in range(patches_count):
-            i = x % patches_per_side * self.patch_side
-            j = x / patches_per_side * self.patch_side
-            i1 = i
-            i2 = i + self.patch_side
-            j1 = j
-            j2 = j + self.patch_side
-            parts[x] = input[i1:i2, j1:j2]
+    def get_output_for(self, input, **kwargs):
+        chunks = list(self.get_chunks([input[i] for i in range(input.shape.eval()[0])], self.patches_count))
+        result = [[T.concatenate([T.concatenate(line, axis=2) for line in list(self.get_chunks(chunk, self.patches_per_side))], axis=1)] for chunk in chunks]
+        return T.concatenate(result, axis=0)
 
-        return T.concatenate(parts, axis=0)   
-        return input.reshape(self.get_output_shape())
+
+
 
 class SliceRotateLayer(layers.Layer):
 
