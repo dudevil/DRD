@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <iputils/lcn.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 int main(int const argc, char const* const argv[])
 {

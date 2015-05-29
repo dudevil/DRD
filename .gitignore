@@ -14,6 +14,7 @@ data/tidy
 # Windows specific
 preprocessing/*/Debug/*
 preprocessing/*/Release/*
+preprocessing/build/*
 *.db
 *.suo
 *.sln

@@ -1,5 +1,7 @@
 #include "trim.hpp"
 
+#include <opencv2/imgproc/imgproc_c.h>
+
 namespace {
 	unsigned percentile(cv::Mat1b const& input, double const perc)
 	{
