@@ -15,17 +15,17 @@ import sys
 IMAGE_SIZE = 128
 BATCH_SIZE = 64
 MOMENTUM = 0.9
-MAX_EPOCH = 100
+MAX_EPOCH = 1
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
 LEARNING_RATE_SCHEDULE = {
     0: 0.02,
-    # 130: 0.01,
-    # 140: 0.005,
-    # 150: 0.002,
-    # 160: 0.001,
-    # 170: 0.0005,
-    # 180: 0.0002,
-    # 190: 0.0001,
+    130: 0.01,
+    140: 0.005,
+    150: 0.002,
+    160: 0.001,
+    170: 0.0005,
+    180: 0.0002,
+    190: 0.0001,
     }
 
 if __name__ == '__main__':
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument("-m",
                         "--model",
                         type=str,
-                        default='model',
+                        default='',
                         help="Path to the file storing network configuration")
     parser.add_argument("-e",
                         "--epochs",
@@ -94,7 +94,8 @@ if __name__ == '__main__':
     # calculates actual predictions to determine weighted kappa
     # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
     #pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
-    pred = T.gt(output.get_output(X_batch, deterministic=True), 0.5)
+    probas = lasagne.layers.get_output(output, X_batch, deterministic=True)
+    pred = T.gt(probas, 0.5)
     
     #pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
     # collect all model parameters
@@ -114,7 +115,7 @@ if __name__ == '__main__':
             },
         )
     iter_valid = theano.function(
-        [], [loss_eval, pred],
+        [], [loss_eval, probas, pred],
         givens={
             X_batch: x_shared,
             y_batch: y_shared,
@@ -170,12 +171,29 @@ if __name__ == '__main__':
             # get prediction and error on validation set
             #chunk_num = 0
             for valid_x_next, valid_y_next in dloader.valid_gen():
-                #print valid_y_next
+                probas = np.zeros((4, valid_x_next.shape[0], 4), dtype=theano.config.floatX)
+
                 x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
                 y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, prediction = iter_valid()
+                batch_valid_loss, probas[0], prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
-                valid_predictions.extend(get_predictions(prediction))
+
+                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
+                y_shared.set_value(valid_y_next, borrow=True)
+                batch_valid_loss, probas[1], prediction = iter_valid()
+
+                batch_valid_losses.append(batch_valid_loss)
+                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, :, ::-1]), borrow=True)
+                y_shared.set_value(valid_y_next, borrow=True)
+                batch_valid_loss, probas[2], prediction = iter_valid()
+
+                batch_valid_losses.append(batch_valid_loss)
+                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ::-1]), borrow=True)
+                y_shared.set_value(valid_y_next, borrow=True)
+                batch_valid_loss, probas[3], prediction = iter_valid()
+                batch_valid_losses.append(batch_valid_loss)
+
+                valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
             c_kappa = kappa(dloader.valid_labels, vp)

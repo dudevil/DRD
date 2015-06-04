@@ -126,7 +126,7 @@ class DataLoader(object):
                  normalize=True,
                  datadir="data",
                  train_path=os.path.join("train", "resized"),
-                 test_path=os.path.join("test", "trimmed"),):
+                 test_path=os.path.join("test", "resized"),):
         train_path = os.path.join(datadir, train_path)
         test_path = os.path.join(datadir, test_path)
         self.image_size = image_size
