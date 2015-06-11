@@ -71,6 +71,7 @@ class Worker(Process):
 
     def _transform(self, image):
         img = imread(image) / 255.
+          # add color augmentation from: http://arxiv.org/ftp/arxiv/papers/1501/1501.02876.pdf
         # normalize images if mean and std were specified
         if self.mean is not None:
             img -= self.mean
@@ -84,6 +85,16 @@ class Worker(Process):
             # flip horizontaly
             if self.rng.randint(2):
                 img = img[:, ::-1, ...]
+            r, g, b = self.rng.randint(2, size=3)
+            if r:
+                img[:, :, 0] = img[:, :, 0] + self.rng.randint(-30, 30)/255.
+            if g:
+                img[:, :, 1] = img[:, :, 1] + self.rng.randint(-30, 30)/255.
+            if b:
+                img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
+
+            #img = np.clip(img, 0, 1)
+
         return img[np.newaxis, ...]
 
     def run(self):
@@ -243,7 +254,7 @@ class DataLoader(object):
         # allocate an array for images
         images = np.zeros((self.batch_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
         n_images = len(image_list)
-        n_chunks = n_images // self.batch_size
+        n_chunks = int(np.ceil(n_images * 1. / self.batch_size))
         for chunk in xrange(n_chunks):
             # prepare a slice of images to read during this pass
             chunk_end = (chunk + 1) * self.batch_size
@@ -264,21 +275,21 @@ class DataLoader(object):
             else:
                 yield np.rollaxis(images, 3, 1)
         # we need to this if the train set size is not divisible by batch_size
-        if n_images > chunk_end:
-            imgs_left = n_images - chunk_end
-            images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
-            for i, image in enumerate(self.train_images[chunk_end: n_images]):
-                if transform:
-                    images[i, ...] = self._transform(image)
-                else:
-                    images[i, ...] = imread(image) / 255.
-            if self.norm:
-                images = self.normalize(images)
-            # change axis order (see comments in valid_gen function) and yield images with labels
-            if labels is not None:
-                yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_end: n_images].values) #.astype(theano.config.floatX).reshape(len(images), 1)
-            else:
-                yield np.rollaxis(images, 3, 1)
+        # if n_images > chunk_end:
+        #     imgs_left = n_images - chunk_end
+        #     images = np.zeros((imgs_left, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
+        #     for i, image in enumerate(self.train_images[chunk_end: n_images]):
+        #         if transform:
+        #             images[i, ...] = self._transform(image)
+        #         else:
+        #             images[i, ...] = imread(image) / 255.
+        #     if self.norm:
+        #         images = self.normalize(images)
+        #     # change axis order (see comments in valid_gen function) and yield images with labels
+        #     if labels is not None:
+        #         yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_end: n_images].values) #.astype(theano.config.floatX).reshape(len(images), 1)
+        #     else:
+        #         yield np.rollaxis(images, 3, 1)
 
     def cleanup(self):
         # terminate the worker processes
