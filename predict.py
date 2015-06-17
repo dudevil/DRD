@@ -19,7 +19,7 @@ def save_submission(predictions, filenames, n=1):
     #assert(len(predictions) == len(filenames))
     names = [os.path.splitext(os.path.basename(image))[0] for image in filenames]
     dfr = pd.DataFrame(predictions[:len(filenames)], index=names)
-    dfr.to_csv(os.path.join("data", "submissions", "submission_%d.csv" % n))
+    dfr.to_csv(os.path.join("data", "submissions", "submission_%s.csv" % n))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -50,7 +50,8 @@ if __name__ == "__main__":
                     normalize=True,
                     batch_size=64,
                     parallel=False,
-                    train_path="train/resized")
+                    train_path="train/trimmed",
+                    test_path=os.path.join("test", "trimmed"))
     test_filenames = dl.test_images
     n_predictions = len(test_filenames)
     print("Compiling theano functions...")
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     predictions = []
 
     for test_chunk in dl.test_gen():
-        preds = predict(test_chunk[:, :, :, ::-1])
+        preds = predict(test_chunk)
         predictions.append(preds)
         sys.stdout.write("progress: %d %%\r" % (len(predictions) * BATCH_SIZE * 100. / n_predictions))
         sys.stdout.flush()
@@ -88,6 +89,6 @@ if __name__ == "__main__":
     predictions = np.vstack(predictions)
     if not args.proba:
         predictions = get_predictions(predictions)
-        save_submission(predictions.flatten(), test_filenames, n=14)
+        save_submission(predictions.flatten(), test_filenames, n=18)
     else:
-        save_submission(predictions, test_filenames, n=14)
+        save_submission(predictions, test_filenames, n='18')

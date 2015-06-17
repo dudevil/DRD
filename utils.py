@@ -43,9 +43,14 @@ def print_network(net):
 
 
 def images_byerror(y_pred, y_true, images):
+    # this is a cunfusing code and should not be used
     diff = np.abs(y_true - y_pred)
     order = diff.argsort()[::-1]
     return pd.Series(index=images[order], data=diff[order])
+
+
+def make_predictions_series(y_pred, images):
+    return pd.Series(index=images, data=y_pred)
 
 
 def kappa(y_true, y_pred):

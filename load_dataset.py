@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageEnhance
 from sklearn.cross_validation import StratifiedShuffleSplit, StratifiedKFold
 from skimage.io import imread
-from skimage.transform import rotate
+from skimage import transform
 from utils import lcn_image, global_contrast_normalize, to_ordinal
 from multiprocessing import Pool, cpu_count, Process, Queue
 from functools import partial
@@ -48,6 +48,7 @@ class Worker(Process):
                  augment=False):
         super(Worker, self).__init__()
         assert len(images) == len(labels)
+        self.daemon = True
         self.images = images
         self.labels = labels
         self.batch_size = batch_size
@@ -93,7 +94,11 @@ class Worker(Process):
             if b:
                 img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
 
-            #img = np.clip(img, 0, 1)
+            # random shifts
+            shift_x = self.rng.randint(-4, 4)
+            shift_y = self.rng.randint(-4, 4)
+            shift = transform.SimilarityTransform(translation=[shift_x, shift_y])
+            img = transform.warp(img, shift, mode='constant', cval=0.0)
 
         return img[np.newaxis, ...]
 
@@ -117,6 +122,7 @@ class Worker(Process):
                     labels = to_ordinal(self.labels[i: i + n_true].values)
                 batch = np.vstack(batch)
                 self.outqueue.put((np.rollaxis(batch, 3, 1), labels))
+                #self.outqueue.put((batch.reshape(len(batch), 1 , 128, 128), labels))
             # shuffle images at epoch end do this for trainig set only
             if self.augment:
                 shuffle_idx = self.rng.permutation(len(self.images))

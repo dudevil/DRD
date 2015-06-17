@@ -12,11 +12,11 @@ MAX_EPOCH = 500
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
 LEARNING_RATE_SCHEDULE = {
     0: 0.02,
-    100: 0.02,
-    200: 0.01,
-    300: 0.005,
-    400: 0.002,
-    450: 0.001
+    #150: 0.01,
+    #200: 0.02,
+    300: 0.01,
+    400: 0.005,
+    #450: 0.001
 }
 
 input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
