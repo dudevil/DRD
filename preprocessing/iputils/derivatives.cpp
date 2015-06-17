@@ -30,7 +30,7 @@ derivatives_t generate_derivatives(cv::Mat const& image, double const k_size = 1
 	return result;
 }
 
-cv::Mat detect_blobes(cv::Mat const& image, double const k_size, derivatives_t& _derivatives)
+cv::Mat detect_blobes(cv::Mat const& image, double const k_size, cv::Mat const& ignore_mask, derivatives_t& _derivatives)
 {
 	if (_derivatives.empty()) {
 		_derivatives = generate_derivatives(image, k_size);
@@ -40,11 +40,15 @@ cv::Mat detect_blobes(cv::Mat const& image, double const k_size, derivatives_t& 
 	cv::Mat const& dyy = _derivatives[2];
 
 	cv::Mat result = dxx.mul(dyy) - dxy.mul(dxy);
-
-	return scale_to_range(result);
+	
+	if (!ignore_mask.empty()) {
+		result.setTo(cv::Scalar::all(0), ~ignore_mask);
+	}
+	
+	return result; // scale_to_range();
 }
 
-cv::Mat detect_ridges(cv::Mat const& image, double const k_size, derivatives_t& _derivatives)
+cv::Mat detect_ridges(cv::Mat const& image, double const k_size, cv::Mat const& ignore_mask, derivatives_t& _derivatives)
 {
 	if (_derivatives.empty()) {
 		_derivatives = generate_derivatives(image, k_size);

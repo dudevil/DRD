@@ -12,14 +12,14 @@ derivatives_t generate_derivatives(cv::Mat image);
 \param k_size gaussian kernel size
 \return
 */
-cv::Mat detect_blobes(cv::Mat const& image, double const k_size = 13, derivatives_t& generate_derivatives = derivatives_t());
+cv::Mat detect_blobes(cv::Mat const& image, double const k_size = 13, cv::Mat const& ignore_mask = cv::Mat(), derivatives_t& generate_derivatives = derivatives_t());
 
 //! Hessian ridge detector
 /*!
 \param k_size gaussian kernel size
 \return
 */
-cv::Mat detect_ridges(cv::Mat const& image, double const k_size = 13, derivatives_t& generate_derivatives = derivatives_t());
+cv::Mat detect_ridges(cv::Mat const& image, double const k_size = 13, cv::Mat const& ignore_mask = cv::Mat(), derivatives_t& generate_derivatives = derivatives_t());
 
 #endif
 

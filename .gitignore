@@ -8,6 +8,9 @@ data/*.csv
 *.png
 *.jpeg
 *.jpg
+*.csv
+*.zip
+*.log
 data/submissions/
 data/tidy
 
@@ -22,5 +25,5 @@ preprocessing/build/*
 *.pdb
 *.exe
 *.lib
-*.sdf
+*sdf
 *.vcxproj*
