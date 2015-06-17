@@ -36,7 +36,7 @@ def print_network(net):
     for layer in net:
         output_shape = layer.get_output_shape()
         print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-            layer.__class__.__name__,
+            getattr(layer, 'name') if getattr(layer, 'name') is not None else layer.__class__.__name__,
             str(output_shape),
             str(functools.reduce(operator.mul, output_shape[1:])),
         ))

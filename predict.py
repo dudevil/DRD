@@ -50,7 +50,7 @@ if __name__ == "__main__":
                     normalize=True,
                     batch_size=64,
                     parallel=False,
-                    train_path="train/trimmed")
+                    train_path="train/resized")
     test_filenames = dl.test_images
     n_predictions = len(test_filenames)
     print("Compiling theano functions...")
@@ -78,19 +78,16 @@ if __name__ == "__main__":
             )
     print("Predicting...")
     predictions = []
-    i = 0
+
     for test_chunk in dl.test_gen():
-        n_batches = int(np.ceil(len(test_chunk) * 1. / BATCH_SIZE))
-        for b in xrange(n_batches):
-            preds = predict(test_chunk[b * BATCH_SIZE: (b + 1) * BATCH_SIZE])
-            predictions.append(preds)
-        i += 1
+        preds = predict(test_chunk[:, :, :, ::-1])
+        predictions.append(preds)
         sys.stdout.write("progress: %d %%\r" % (len(predictions) * BATCH_SIZE * 100. / n_predictions))
         sys.stdout.flush()
     print("Saving predictions")
     predictions = np.vstack(predictions)
     if not args.proba:
         predictions = get_predictions(predictions)
-        save_submission(predictions.flatten(), test_filenames)
+        save_submission(predictions.flatten(), test_filenames, n=14)
     else:
-        save_submission(predictions, test_filenames, n=90)
+        save_submission(predictions, test_filenames, n=14)
