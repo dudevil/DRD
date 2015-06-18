@@ -4,7 +4,7 @@ from lasagne.layers import dnn
 from custom_layers import SliceRotateLayer, RotateMergeLayer, leaky_relu
 
 
-IMAGE_SIZE = 128
+IMAGE_SIZE = 256
 BATCH_SIZE = 64
 MOMENTUM = 0.9
 
@@ -21,7 +21,7 @@ LEARNING_RATE_SCHEDULE = {
 
 input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 
-slicerot = SliceRotateLayer(input)
+slicerot = SliceRotateLayer(input, patch_shape=128)
 
 conv1 = dnn.Conv2DDNNLayer(slicerot,
                            num_filters=64,
@@ -90,7 +90,7 @@ dense2 = layers.FeaturePoolLayer(dense2a, 2)
 
 out_dropout = lasagne.layers.DropoutLayer(dense2, p=0.5)
 output = layers.DenseLayer(out_dropout,
-                           num_units=4,
+                           num_units=1,
                            nonlinearity=nonlinearities.sigmoid)
 
 # collect layers to save them later

@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # allocate symbolic variables for theano graph computations
     batch_index = T.iscalar('batch_index')
     X_batch = T.tensor4('x')
-    y_batch = T.fmatrix('y')
+    y_batch = T.ivector('y')
     
     # allocate shared variables for images, labels and learing rate
     x_shared = theano.shared(np.zeros((BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX),
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     #                                                loss_function=lasagne.objectives.mse,
     #                                                aggregation='sum')
     objective = lasagne.objectives.Objective(output,
-                                             loss_function=lasagne.objectives.mse)
+                                             loss_function=lasagne.objectives.binary_crossentropy)
     mask = np.array([1, 2, 3, 4], dtype=theano.config.floatX)
     loss_train = objective.get_loss(X_batch, target=y_batch)
     
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                 y_shared.set_value(valid_y_next, borrow=True)
                 batch_valid_loss, probs, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
-                valid_predictions.extend(get_predictions(prediction))
+                valid_predictions.extend(prediction)
                 #x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
                 # y_shared.set_value(valid_y_next, borrow=True)
                 # batch_valid_loss, probas[1], prediction = iter_valid()
@@ -199,7 +199,8 @@ if __name__ == '__main__':
                 # valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
-            c_kappa = kappa(dloader.valid_labels, vp)
+            c_kappa = np.sum(valid_predictions == dloader.valid_labels) / float(len(dloader.valid_labels))
+            #kappa(dloader.valid_labels, vp)
             print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
                   (epoch,
                    avg_train_loss,

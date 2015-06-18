@@ -119,7 +119,8 @@ class Worker(Process):
                         self.pseudo_labels[pseudo_idx].astype(theano.config.floatX)
                     ))
                 else:
-                    labels = to_ordinal(self.labels[i: i + n_true].values)
+                    #labels = to_ordinal(self.labels[i: i + n_true].values)
+                    labels = self.labels[i: i + n_true].values
                 batch = np.vstack(batch)
                 self.outqueue.put((np.rollaxis(batch, 3, 1), labels))
                 #self.outqueue.put((batch.reshape(len(batch), 1 , 128, 128), labels))
@@ -152,9 +153,11 @@ class DataLoader(object):
         self.batch_size = batch_size
         self.parallel = parallel
         labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
-
+        # get only levels 0,1,2
+        labels = labels[labels.level < 3]
+        labels[labels.level == 2] = 1
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
+        sss = StratifiedShuffleSplit(labels.level, 1, test_size=0.1, random_state=random_state)
         self.train_index, self.valid_index = list(sss).pop()
         # self.train_index = self.train_index[:1000]
 

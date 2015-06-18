@@ -35,7 +35,7 @@ class ImagePartitionLayer(layers.Layer):
         return out_shape
 
     def get_output_for(self, input, **kwargs):
-        return T.concatenate([self.image_partition(input[i]) for i in range(self.input_shape[0])], axis = 0)
+        return T.concatenate([self.image_partition(input[i]) for i in range(self.input_shape[0])], axis=0)
 
 # Assemble image from square chunks
 class ImageAssembleLayer(layers.Layer):
