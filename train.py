@@ -49,7 +49,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("Loading dataset...")
-    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, train_path="train/resized")
+    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=1106, train_path="train/trimmed")
 
     # for Rasim    
     #dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, datadir="C:/workspace/projects/kaggle/retina-diabetic")
@@ -83,10 +83,13 @@ if __name__ == '__main__':
     learning_rate = theano.shared(np.float32(LEARNING_RATE_SCHEDULE[0]))
     
     # use mse objective for regression
+    # objective = lasagne.objectives.MaskedObjective(output,
+    #                                                loss_function=lasagne.objectives.mse,
+    #                                                aggregation='sum')
     objective = lasagne.objectives.Objective(output,
                                              loss_function=lasagne.objectives.mse)
-
-    loss_train = objective.get_loss(X_batch, target=y_batch) #+ 0.00000005 * sum(map(regularization.l2, all_layers))
+    mask = np.array([1, 2, 3, 4], dtype=theano.config.floatX)
+    loss_train = objective.get_loss(X_batch, target=y_batch)
     
     loss_eval = objective.get_loss(X_batch, target=y_batch,
                                    deterministic=True)
@@ -171,29 +174,29 @@ if __name__ == '__main__':
             # get prediction and error on validation set
             #chunk_num = 0
             for valid_x_next, valid_y_next in dloader.valid_gen():
-                probas = np.zeros((4, valid_x_next.shape[0], 4), dtype=theano.config.floatX)
+                # probas = np.zeros((4, valid_x_next.shape[0], 4), dtype=theano.config.floatX)
 
                 x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
                 y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, probas[0], prediction = iter_valid()
+                batch_valid_loss, probs, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
-
-                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
-                y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, probas[1], prediction = iter_valid()
-
-                batch_valid_losses.append(batch_valid_loss)
-                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, :, ::-1]), borrow=True)
-                y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, probas[2], prediction = iter_valid()
-
-                batch_valid_losses.append(batch_valid_loss)
-                x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ::-1]), borrow=True)
-                y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, probas[3], prediction = iter_valid()
-                batch_valid_losses.append(batch_valid_loss)
-
-                valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
+                valid_predictions.extend(get_predictions(prediction))
+                #x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
+                # y_shared.set_value(valid_y_next, borrow=True)
+                # batch_valid_loss, probas[1], prediction = iter_valid()
+                #
+                # batch_valid_losses.append(batch_valid_loss)
+                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, :, ::-1]), borrow=True)
+                # y_shared.set_value(valid_y_next, borrow=True)
+                # batch_valid_loss, probas[2], prediction = iter_valid()
+                #
+                # batch_valid_losses.append(batch_valid_loss)
+                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ::-1]), borrow=True)
+                # y_shared.set_value(valid_y_next, borrow=True)
+                # batch_valid_loss, probas[3], prediction = iter_valid()
+                # batch_valid_losses.append(batch_valid_loss)
+                #
+                # valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
             c_kappa = kappa(dloader.valid_labels, vp)
@@ -216,7 +219,8 @@ if __name__ == '__main__':
                 if epoch >= min_epochs:
                     save_network(all_layers)
                     conf_mat = confusion_matrix(dloader.valid_labels, valid_predictions)
-                    imgs_error = images_byerror(valid_predictions, dloader.valid_labels.values, dloader.valid_images.values)
+                    imgs_error = make_predictions_series(valid_predictions, dloader.valid_images.values)
+                    #imgs_error = images_byerror(valid_predictions, dloader.valid_labels.values, dloader.valid_images.values)
                 best_kappa = c_kappa
                 best_epoch = epoch
                 patience = 10
