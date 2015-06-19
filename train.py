@@ -12,8 +12,8 @@ from utils import *
 
 import sys
 
-IMAGE_SIZE = 128
-BATCH_SIZE = 64
+IMAGE_SIZE = 256
+BATCH_SIZE = 32
 MOMENTUM = 0.9
 MAX_EPOCH = 1
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("Loading dataset...")
-    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=1106, train_path="train/trimmed")
+    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=1106, train_path="train/trimmed256")
 
     # for Rasim    
     #dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, datadir="C:/workspace/projects/kaggle/retina-diabetic")
@@ -73,12 +73,12 @@ if __name__ == '__main__':
     # allocate symbolic variables for theano graph computations
     batch_index = T.iscalar('batch_index')
     X_batch = T.tensor4('x')
-    y_batch = T.ivector('y')
+    y_batch = T.imatrix('y')
     
     # allocate shared variables for images, labels and learing rate
     x_shared = theano.shared(np.zeros((BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX),
                              borrow=True)
-    y_shared = theano.shared(np.zeros((BATCH_SIZE, 4), dtype=theano.config.floatX),
+    y_shared = theano.shared(np.zeros((BATCH_SIZE, 1), dtype=np.int32),
                              borrow=True)
     learning_rate = theano.shared(np.float32(LEARNING_RATE_SCHEDULE[0]))
     
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     #                                                loss_function=lasagne.objectives.mse,
     #                                                aggregation='sum')
     objective = lasagne.objectives.Objective(output,
-                                             loss_function=lasagne.objectives.binary_crossentropy)
+                                             loss_function=lasagne.objectives.mse)
     mask = np.array([1, 2, 3, 4], dtype=theano.config.floatX)
     loss_train = objective.get_loss(X_batch, target=y_batch)
     
@@ -96,9 +96,9 @@ if __name__ == '__main__':
     
     # calculates actual predictions to determine weighted kappa
     # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
-    #pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
-    probas = lasagne.layers.get_output(output, X_batch, deterministic=True)
-    pred = T.gt(probas, 0.5)
+    pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
+    #probas = lasagne.layers.get_output(output, X_batch, deterministic=True)
+    #pred = T.gt(probas, 0.5)
     
     #pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
     # collect all model parameters
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             },
         )
     iter_valid = theano.function(
-        [], [loss_eval, probas, pred],
+        [], [loss_eval, pred],
         givens={
             X_batch: x_shared,
             y_batch: y_shared,
@@ -163,7 +163,7 @@ if __name__ == '__main__':
                 if not len(x_next) == BATCH_SIZE:
                     continue
                 x_shared.set_value(lasagne.utils.floatX(x_next), borrow=True)
-                y_shared.set_value(y_next, borrow=True)
+                y_shared.set_value(y_next.reshape(BATCH_SIZE, 1), borrow=True)
                 batch_train_loss = iter_train()
                 batch_train_losses.append(batch_train_loss)
                 #num_train_batches = int(np.ceil(len(x_next) / BATCH_SIZE))
@@ -175,31 +175,18 @@ if __name__ == '__main__':
             #chunk_num = 0
             for valid_x_next, valid_y_next in dloader.valid_gen():
                 # probas = np.zeros((4, valid_x_next.shape[0], 4), dtype=theano.config.floatX)
-
+                if not len(valid_x_next) == BATCH_SIZE:
+                    continue
                 x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
-                y_shared.set_value(valid_y_next, borrow=True)
-                batch_valid_loss, probs, prediction = iter_valid()
+                y_shared.set_value(valid_y_next.reshape(BATCH_SIZE, 1), borrow=True)
+                batch_valid_loss, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
                 valid_predictions.extend(prediction)
-                #x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[1], prediction = iter_valid()
-                #
-                # batch_valid_losses.append(batch_valid_loss)
-                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, :, ::-1]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[2], prediction = iter_valid()
-                #
-                # batch_valid_losses.append(batch_valid_loss)
-                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ::-1]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[3], prediction = iter_valid()
-                # batch_valid_losses.append(batch_valid_loss)
-                #
-                # valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
-            c_kappa = np.sum(valid_predictions == dloader.valid_labels) / float(len(dloader.valid_labels))
+            #print valid_predictions
+            #print dloader.valid_labels
+            c_kappa = np.sum(valid_predictions == dloader.valid_labels.values) / float(len(dloader.valid_labels))
             #kappa(dloader.valid_labels, vp)
             print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
                   (epoch,

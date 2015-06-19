@@ -5,7 +5,7 @@ from custom_layers import SliceRotateLayer, RotateMergeLayer, leaky_relu
 
 
 IMAGE_SIZE = 256
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 MOMENTUM = 0.9
 
 MAX_EPOCH = 500
@@ -21,18 +21,19 @@ LEARNING_RATE_SCHEDULE = {
 
 input = layers.InputLayer(shape=(BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE))
 
-slicerot = SliceRotateLayer(input, patch_shape=128)
+slicerot = SliceRotateLayer(input, patch_shape=(128, 128))
 
 conv1 = dnn.Conv2DDNNLayer(slicerot,
-                           num_filters=64,
-                           filter_size=(3, 3),
+                           num_filters=32,
+                           filter_size=(9, 9),
+                           stride=2,
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
 pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = dnn.Conv2DDNNLayer(conv2_dropout,
-                           num_filters=96,
+                           num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
@@ -40,14 +41,14 @@ pool2 = dnn.MaxPool2DDNNLayer(conv2, (3, 3), stride=(2, 2))
 
 conv3_dropout = lasagne.layers.DropoutLayer(pool2, p=0.2)
 conv3 = dnn.Conv2DDNNLayer(conv3_dropout,
-                           num_filters=128,
+                           num_filters=96,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
 
 conv4_dropout = lasagne.layers.DropoutLayer(conv3, p=0.3)
 conv4 = dnn.Conv2DDNNLayer(conv4_dropout,
-                           num_filters=96,
+                           num_filters=64,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)

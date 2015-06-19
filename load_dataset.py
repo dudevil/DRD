@@ -95,10 +95,10 @@ class Worker(Process):
                 img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
 
             # random shifts
-            shift_x = self.rng.randint(-4, 4)
-            shift_y = self.rng.randint(-4, 4)
-            shift = transform.SimilarityTransform(translation=[shift_x, shift_y])
-            img = transform.warp(img, shift, mode='constant', cval=0.0)
+            # shift_x = self.rng.randint(-4, 4)
+            # shift_y = self.rng.randint(-4, 4)
+            # shift = transform.SimilarityTransform(translation=[shift_x, shift_y])
+            # img = transform.warp(img, shift, mode='constant', cval=0.0)
 
         return img[np.newaxis, ...]
 
@@ -120,7 +120,7 @@ class Worker(Process):
                     ))
                 else:
                     #labels = to_ordinal(self.labels[i: i + n_true].values)
-                    labels = self.labels[i: i + n_true].values
+                    labels = self.labels[i: i + n_true].values.astype(np.int32)
                 batch = np.vstack(batch)
                 self.outqueue.put((np.rollaxis(batch, 3, 1), labels))
                 #self.outqueue.put((batch.reshape(len(batch), 1 , 128, 128), labels))
@@ -155,19 +155,19 @@ class DataLoader(object):
         labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
         # get only levels 0,1,2
         labels = labels[labels.level < 3]
-        labels[labels.level == 2] = 1
+        labels.level[labels.level == 2] = 1
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=0.1, random_state=random_state)
         self.train_index, self.valid_index = list(sss).pop()
-        # self.train_index = self.train_index[:1000]
+        #self.train_index = self.train_index[:1000]
 
         # get train and validation labels
-        self.train_labels = labels.level[self.train_index]
-        self.valid_labels = labels.level[self.valid_index]
+        self.train_labels = labels.level.iloc[self.train_index]
+        self.valid_labels = labels.level.iloc[self.valid_index]
         # prepare train and test image files
-        self.train_images = labels.image[self.train_index].apply(lambda img:
+        self.train_images = labels.image.iloc[self.train_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
-        self.valid_images = labels.image[self.valid_index].apply(lambda img:
+        self.valid_images = labels.image.iloc[self.valid_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
         self.test_images = [os.path.join(test_path, img) for img in os.listdir(test_path)]
         pseudos = pd.read_csv("data/submissions/submission_90.csv")

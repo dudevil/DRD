@@ -87,7 +87,7 @@ class SliceRotateLayer(layers.Layer):
 class RotateMergeLayer(layers.Layer):
 
     def get_output_shape_for(self, input_shape):
-        return input_shape[0] / 4, np.prod(input_shape[1:]) * 4
+        return input_shape[0] // 4, np.prod(input_shape[1:]) * 4
 
     def get_output_for(self, input, **kwargs):
         input_r = input.reshape((4, self.input_shape[0] // 4, int(np.prod(self.input_shape[1:])))) # split out the 4* dimension
