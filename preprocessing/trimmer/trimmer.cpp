@@ -37,7 +37,7 @@ cv::Mat get_inner_square(cv::Mat const& img) {
 int main(int const argc, char const* const argv[])
 {
 	// read command line
-	if (argc != 4) {
+	if (argc != 5) {
 		std::cout
 			<< "usage:" << std::endl
 			<< "./trimmer <input file> <output file> <output width> <trim_to_inner_square>" << std::endl
@@ -47,7 +47,7 @@ int main(int const argc, char const* const argv[])
 	std::string const input_filename(argv[1]);
 	std::string const output_filename(argv[2]);
 	unsigned const output_side_size = std::stoi(argv[3]);
-	bool take_inner_square = true;
+	bool take_inner_square = std::stoi(argv[4]);;
 
 	// read image, resize, split
 	cv::Mat3b const img = cv::imread(input_filename);
@@ -56,7 +56,7 @@ int main(int const argc, char const* const argv[])
 
 	// resize & write output
 	cv::Mat3b img_resized;
-	cv::resize(img_trimmed, img_resized, cv::Size(output_side_size, img_trimmed.rows * double(output_side_size) / img_trimmed.cols));
+	cv::resize(img_trimmed, img_resized, cv::Size(output_side_size, img_trimmed.rows * double(output_side_size) / img_trimmed.cols), 0, 0, cv::INTER_LANCZOS4);
 
 	// make image square
 	int const rows_remained = output_side_size - img_resized.rows;
