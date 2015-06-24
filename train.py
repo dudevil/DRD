@@ -73,12 +73,12 @@ if __name__ == '__main__':
     # allocate symbolic variables for theano graph computations
     batch_index = T.iscalar('batch_index')
     X_batch = T.tensor4('x')
-    y_batch = T.imatrix('y')
+    y_batch = T.fmatrix('y')
     
     # allocate shared variables for images, labels and learing rate
     x_shared = theano.shared(np.zeros((BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX),
                              borrow=True)
-    y_shared = theano.shared(np.zeros((BATCH_SIZE, 1), dtype=np.int32),
+    y_shared = theano.shared(np.zeros((BATCH_SIZE, 4), dtype=theano.config.floatX),
                              borrow=True)
     learning_rate = theano.shared(np.float32(LEARNING_RATE_SCHEDULE[0]))
     
@@ -96,9 +96,9 @@ if __name__ == '__main__':
     
     # calculates actual predictions to determine weighted kappa
     # http://www.kaggle.com/c/diabetic-retinopathy-detection/details/evaluation
-    pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
-    #probas = lasagne.layers.get_output(output, X_batch, deterministic=True)
-    #pred = T.gt(probas, 0.5)
+    #pred = T.argmax(output.get_output(X_batch, deterministic=True), axis=1)
+    probas = lasagne.layers.get_output(output, X_batch, deterministic=True)
+    pred = T.gt(probas, 0.5)
     
     #pred = T.cast(output.get_output(X_batch, deterministic=True), 'int32').clip(0, 4)
     # collect all model parameters
@@ -163,7 +163,7 @@ if __name__ == '__main__':
                 if not len(x_next) == BATCH_SIZE:
                     continue
                 x_shared.set_value(lasagne.utils.floatX(x_next), borrow=True)
-                y_shared.set_value(y_next.reshape(BATCH_SIZE, 1), borrow=True)
+                y_shared.set_value(y_next, borrow=True)
                 batch_train_loss = iter_train()
                 batch_train_losses.append(batch_train_loss)
                 #num_train_batches = int(np.ceil(len(x_next) / BATCH_SIZE))
@@ -178,10 +178,10 @@ if __name__ == '__main__':
                 if not len(valid_x_next) == BATCH_SIZE:
                     continue
                 x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
-                y_shared.set_value(valid_y_next.reshape(BATCH_SIZE, 1), borrow=True)
+                y_shared.set_value(valid_y_next, borrow=True)
                 batch_valid_loss, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
-                valid_predictions.extend(prediction)
+                valid_predictions.extend(get_predictions(prediction))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
             #print valid_predictions
