@@ -60,10 +60,11 @@ int main(int const argc, char const* const argv[])
 
 	// make image square
 	int const rows_remained = output_side_size - img_resized.rows;
-	int const top = rows_remained / 2;
-	int const bottom = rows_remained / 2 + rows_remained % 2;
-	cv::copyMakeBorder(img_resized, img_resized, top, bottom, 0, 0, cv::BORDER_CONSTANT, cv::Scalar::all(0));
-
+	if (rows_remained > 0) {
+		int const top = rows_remained / 2;
+		int const bottom = rows_remained / 2 + rows_remained % 2;
+		cv::copyMakeBorder(img_resized, img_resized, top, bottom, 0, 0, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+	}
 	img_resized = take_inner_square ? get_inner_square(img_resized) : img_resized;
 
 	cv::imwrite(output_filename, img_resized);
