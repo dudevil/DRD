@@ -50,17 +50,19 @@ conv4 = dnn.Conv2DDNNLayer(conv4_dropout,
                            num_filters=96,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
-                           nonlinearity=leaky_relu)
+                           nonlinearity=leaky_relu,
+                           border_mode='same')
+
 pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
 
 conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.4)
-conv5 = dnn.Conv2DDNNLayer(conv5_dropout,
+conv5a = dnn.Conv2DDNNLayer(conv5_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
                            W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu,
                            border_mode='same')
-
+conv5 = layers.FeaturePoolLayer(conv5a, 2)
 # conv6_dropout = lasagne.layers.DropoutLayer(conv5, p=0.1)
 # conv6 = layers.Conv2DLayer(conv6_dropout,
 #                            num_filters=128,
@@ -68,7 +70,7 @@ conv5 = dnn.Conv2DDNNLayer(conv5_dropout,
 #                            W=lasagne.init.Orthogonal(gain='relu'),
 #                            nonlinearity=leaky_relu,
 #                            border_mode='same')
-pool6 = dnn.MaxPool2DDNNLayer(conv5, (2, 2), stride=(2, 2))
+pool6 = dnn.MaxPool2DDNNLayer(conv5, (3, 3), stride=(2, 2))
 
 merge = RotateMergeLayer(pool6)
 
@@ -100,7 +102,7 @@ all_layers = [input,
               conv2_dropout, conv2, pool2,
               conv3_dropout, conv3,
               conv4_dropout, conv4, pool4,
-              conv5_dropout, conv5, pool6,
+              conv5_dropout, conv5a, conv5, pool6,
               merge,
               dense1_dropout, dense1a, dense1,
               dense2_dropout, dense2a, dense2,

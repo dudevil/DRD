@@ -157,12 +157,26 @@ class DataLoader(object):
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
         self.train_index, self.valid_index = list(sss).pop()
         # self.train_index = self.train_index[:1000]
-
-        # get train and validation labels
-        self.train_labels = labels.level[self.train_index]
+        train_labels = labels.iloc[self.train_index].copy()
         self.valid_labels = labels.level[self.valid_index]
+        #replicate classes
+        n_0 = len(train_labels[train_labels.level == 0])
+        n_1 = len(train_labels[train_labels.level == 1])
+        n_2 = len(train_labels[train_labels.level == 2])
+        n_3 = len(train_labels[train_labels.level == 3])
+        n_4 = len(train_labels[train_labels.level == 4])
+
+        #train_labels = train_labels.append([train_labels[train_labels.level == 1]] * int(n_0/n_1), ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 2]] * 2, ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 3]] * 10, ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 4]] * 10, ignore_index=True)
+        #shuffle classes:
+        train_labels = train_labels.iloc[self.random.permutation(len(train_labels))]
+        # get train and validation labels
+        self.train_labels = train_labels.level
+
         # prepare train and test image files
-        self.train_images = labels.image[self.train_index].apply(lambda img:
+        self.train_images = train_labels.image.apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
@@ -192,8 +206,8 @@ class DataLoader(object):
             self.mean = self.std = None
 
         if parallel:
-            self.train_queue = Queue(10)
-            self.valid_queue = Queue(10)
+            self.train_queue = Queue(30)
+            self.valid_queue = Queue(30)
             # get mean and std across training set
             if pseudo_proportion:
                 self.train_worker = Worker(self.train_images,

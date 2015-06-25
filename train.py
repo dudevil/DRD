@@ -137,7 +137,7 @@ if __name__ == '__main__':
     epoch = 0
     _iter = 0
     # wait for at least this many epochs before saving the model
-    min_epochs = 30
+    min_epochs = 0
     # store these values for learning curves plotting
     train_loss = []
     valid_loss = []
@@ -181,22 +181,6 @@ if __name__ == '__main__':
                 batch_valid_loss, probs, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
                 valid_predictions.extend(get_predictions(prediction))
-                #x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ...]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[1], prediction = iter_valid()
-                #
-                # batch_valid_losses.append(batch_valid_loss)
-                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, :, ::-1]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[2], prediction = iter_valid()
-                #
-                # batch_valid_losses.append(batch_valid_loss)
-                # x_shared.set_value(lasagne.utils.floatX(valid_x_next[:, :, ::-1, ::-1]), borrow=True)
-                # y_shared.set_value(valid_y_next, borrow=True)
-                # batch_valid_loss, probas[3], prediction = iter_valid()
-                # batch_valid_losses.append(batch_valid_loss)
-                #
-                # valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
             c_kappa = kappa(dloader.valid_labels, vp)
@@ -224,6 +208,14 @@ if __name__ == '__main__':
                 best_kappa = c_kappa
                 best_epoch = epoch
                 patience = 10
+            if (epoch % 10) == 0:
+                save_network(all_layers, filename='data/tidy/snapshot_%d.pickle' % epoch)
+                conf_mat = confusion_matrix(dloader.valid_labels, valid_predictions)
+                imgs_error = make_predictions_series(valid_predictions, dloader.valid_images.values)
+                results = np.array([train_loss, valid_loss, kappa_loss], dtype=np.float)
+                np.save("data/tidy/training_%d.npy" % epoch, results)
+                np.save("data/tidy/confusion_%d.npy" % epoch, conf_mat)
+                imgs_error.to_csv("data/tidy/imgs_error_%d.csv" % epoch)
             else:
                 #decrease patience
                 patience -= 1
