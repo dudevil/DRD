@@ -89,6 +89,6 @@ if __name__ == "__main__":
     predictions = np.vstack(predictions)
     if not args.proba:
         predictions = get_predictions(predictions)
-        save_submission(predictions.flatten(), test_filenames, n=18)
+        save_submission(predictions.flatten(), test_filenames, n=23)
     else:
         save_submission(predictions, test_filenames, n='19')

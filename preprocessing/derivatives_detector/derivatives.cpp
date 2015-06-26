@@ -23,8 +23,8 @@ int main(int const argc, char const* const argv[])
 			<< "./derivatives <input file> <output file> <kernel size> <as_gray>" << std::endl;
 		return EXIT_FAILURE;
 	}
-	std::string const input_filename(argv[1]); //("samples/1100_left_1.png");// (argv[1]);
-	std::string const output_filename(argv[2]);
+	std::string const input_filename("samples/40_left_lcn_gcn_yuv.png");// argv[1]); //("samples/1100_left_1.png");// (argv[1]);
+	std::string const output_filename("samples/40_left_lcn_gcn_yuv_proposals.png");// argv[2]);
 	unsigned const k_size = std::stoi(argv[3]); //5; // std::stoi(argv[3]);
 	bool const cvt_to_gray = 1;// std::stoi(argv[4]);
 
@@ -40,16 +40,16 @@ int main(int const argc, char const* const argv[])
 		img.convertTo(img, CV_64FC3, 1.0 / 255.0);
 	}
 	
-	cv::Mat mask;
-	cv::inRange(img, cv::Scalar(0.05, 0.05, 0.05), cv::Scalar(1, 1, 1), mask);
-	cv::erode(mask, mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(25, 25)));
-
-
-	cv::Mat lcn_image = normalize_local_contrast(img, 25);
+	//cv::Mat mask;
+	//cv::inRange(img, cv::Scalar(0.05, 0.05, 0.05), cv::Scalar(1, 1, 1), mask);
+	//cv::erode(mask, mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(25, 25)));
+	//
+	//
+	cv::Mat lcn_image = img;// normalize_local_contrast(img, 25);
 
 	//cv::GaussianBlur(lcn_image, lcn_image, cv::Size(5, 5), 0, 0);
 
-	cv::Mat normalized = detect_blobes(lcn_image, 7, mask);
+	cv::Mat normalized = detect_blobes(lcn_image, 9);// mask);
 	normalized.convertTo(normalized, CV_32F);
 	cv::Mat normalized_thresh;
 	cv::threshold(normalized, normalized_thresh, 3500.0, 0.0, CV_THRESH_TOZERO);

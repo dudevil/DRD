@@ -120,7 +120,6 @@ class Worker(Process):
                     ))
                 else:
                     labels = to_ordinal(self.labels[i: i + n_true].values)
-                    #labels = self.labels[i: i + n_true].values.astype(np.int32)
                 batch = np.vstack(batch)
                 self.outqueue.put((np.rollaxis(batch, 3, 1), labels))
                 #self.outqueue.put((batch.reshape(len(batch), 1 , 128, 128), labels))
@@ -153,19 +152,31 @@ class DataLoader(object):
         self.batch_size = batch_size
         self.parallel = parallel
         labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
-        # get only levels 0,1,2
-        # labels = labels[labels.level < 3]
-        # labels.level[labels.level == 2] = 1
-        # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=0.1, random_state=random_state)
-        self.train_index, self.valid_index = list(sss).pop()
-        #self.train_index = self.train_index[:1000]
 
-        # get train and validation labels
-        self.train_labels = labels.level[self.train_index]
+        # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
+        sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
+        self.train_index, self.valid_index = list(sss).pop()
+        # self.train_index = self.train_index[:1000]
+        train_labels = labels.iloc[self.train_index].copy()
         self.valid_labels = labels.level[self.valid_index]
+        #replicate classes
+        n_0 = len(train_labels[train_labels.level == 0])
+        n_1 = len(train_labels[train_labels.level == 1])
+        n_2 = len(train_labels[train_labels.level == 2])
+        n_3 = len(train_labels[train_labels.level == 3])
+        n_4 = len(train_labels[train_labels.level == 4])
+
+        #train_labels = train_labels.append([train_labels[train_labels.level == 1]] * int(n_0/n_1), ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 2]] * 2, ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 3]] * 10, ignore_index=True)
+        train_labels = train_labels.append([train_labels[train_labels.level == 4]] * 10, ignore_index=True)
+        #shuffle classes:
+        train_labels = train_labels.iloc[self.random.permutation(len(train_labels))]
+        # get train and validation labels
+        self.train_labels = train_labels.level
+
         # prepare train and test image files
-        self.train_images = labels.image[self.train_index].apply(lambda img:
+        self.train_images = train_labels.image.apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
@@ -195,8 +206,8 @@ class DataLoader(object):
             self.mean = self.std = None
 
         if parallel:
-            self.train_queue = Queue(10)
-            self.valid_queue = Queue(10)
+            self.train_queue = Queue(30)
+            self.valid_queue = Queue(30)
             # get mean and std across training set
             if pseudo_proportion:
                 self.train_worker = Worker(self.train_images,
