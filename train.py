@@ -13,7 +13,7 @@ from utils import *
 import sys
 
 IMAGE_SIZE = 256
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 MOMENTUM = 0.9
 MAX_EPOCH = 1
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("Loading dataset...")
-    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=1106, train_path="train/trimmed256")
+    dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=2706, train_path="train/trimmed256gr")
 
     # for Rasim    
     #dloader = DataLoader(image_size=IMAGE_SIZE, batch_size=BATCH_SIZE, random_state=16, datadir="C:/workspace/projects/kaggle/retina-diabetic")
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     y_batch = T.fmatrix('y')
     
     # allocate shared variables for images, labels and learing rate
-    x_shared = theano.shared(np.zeros((BATCH_SIZE, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX),
+    x_shared = theano.shared(np.zeros((BATCH_SIZE, 1, IMAGE_SIZE, IMAGE_SIZE), dtype=theano.config.floatX),
                              borrow=True)
     y_shared = theano.shared(np.zeros((BATCH_SIZE, 4), dtype=theano.config.floatX),
                              borrow=True)
@@ -186,8 +186,7 @@ if __name__ == '__main__':
             vp = np.array(valid_predictions)
             #print valid_predictions
             #print dloader.valid_labels
-            c_kappa = np.sum(valid_predictions == dloader.valid_labels.values) / float(len(dloader.valid_labels))
-            #kappa(dloader.valid_labels, vp)
+            c_kappa = kappa(dloader.valid_labels, vp)
             print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
                   (epoch,
                    avg_train_loss,

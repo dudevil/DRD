@@ -12,8 +12,8 @@ from utils import load_network, get_predictions
 from load_dataset import DataLoader
 
 
-BATCH_SIZE = 64
-IMAGE_SIZE = 128
+BATCH_SIZE = 32
+IMAGE_SIZE = 256
 
 def save_submission(predictions, filenames, n=1):
     #assert(len(predictions) == len(filenames))
@@ -48,10 +48,10 @@ if __name__ == "__main__":
     # load test data chunk
     dl = DataLoader(image_size=IMAGE_SIZE,
                     normalize=True,
-                    batch_size=64,
+                    batch_size=BATCH_SIZE,
                     parallel=False,
-                    train_path="train/trimmed",
-                    test_path=os.path.join("test", "trimmed"))
+                    train_path="train/trimmed256grey",
+                    test_path=os.path.join("test", "trimmed256g"))
     test_filenames = dl.test_images
     n_predictions = len(test_filenames)
     print("Compiling theano functions...")
@@ -89,6 +89,6 @@ if __name__ == "__main__":
     predictions = np.vstack(predictions)
     if not args.proba:
         predictions = get_predictions(predictions)
-        save_submission(predictions.flatten(), test_filenames, n=23)
+        save_submission(predictions.flatten(), test_filenames, n=24)
     else:
         save_submission(predictions, test_filenames, n='19')

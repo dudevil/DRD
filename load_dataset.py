@@ -86,20 +86,20 @@ class Worker(Process):
             # flip horizontaly
             if self.rng.randint(2):
                 img = img[:, ::-1, ...]
-            r, g, b = self.rng.randint(2, size=3)
-            if r:
-                img[:, :, 0] = img[:, :, 0] + self.rng.randint(-30, 30)/255.
-            if g:
-                img[:, :, 1] = img[:, :, 1] + self.rng.randint(-30, 30)/255.
-            if b:
-                img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
+            #r, g, b = self.rng.randint(2, size=3)
+            #if r:
+            #    img[:, :, 0] = img[:, :, 0] + self.rng.randint(-30, 30)/255.
+            #if g:
+            #    img[:, :, 1] = img[:, :, 1] + self.rng.randint(-30, 30)/255.
+            #if b:
+            #    img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
 
             # random shifts
             # shift_x = self.rng.randint(-4, 4)
             # shift_y = self.rng.randint(-4, 4)
             # shift = transform.SimilarityTransform(translation=[shift_x, shift_y])
             # img = transform.warp(img, shift, mode='constant', cval=0.0)
-
+	img = img.reshape(img.shape[0], img.shape[1], 1)
         return img[np.newaxis, ...]
 
     def run(self):
@@ -157,26 +157,29 @@ class DataLoader(object):
         sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
         self.train_index, self.valid_index = list(sss).pop()
         # self.train_index = self.train_index[:1000]
-        train_labels = labels.iloc[self.train_index].copy()
-        self.valid_labels = labels.level[self.valid_index]
-        #replicate classes
-        n_0 = len(train_labels[train_labels.level == 0])
-        n_1 = len(train_labels[train_labels.level == 1])
-        n_2 = len(train_labels[train_labels.level == 2])
-        n_3 = len(train_labels[train_labels.level == 3])
-        n_4 = len(train_labels[train_labels.level == 4])
+        # train_labels = labels.iloc[self.train_index].copy()
+        # self.valid_labels = labels.level[self.valid_index]
+        # #replicate classes
+        # n_0 = len(train_labels[train_labels.level == 0])
+        # n_1 = len(train_labels[train_labels.level == 1])
+        # n_2 = len(train_labels[train_labels.level == 2])
+        # n_3 = len(train_labels[train_labels.level == 3])
+        # n_4 = len(train_labels[train_labels.level == 4])
+        #
+        # #train_labels = train_labels.append([train_labels[train_labels.level == 1]] * int(n_0/n_1), ignore_index=True)
+        # train_labels = train_labels.append([train_labels[train_labels.level == 2]] * 2, ignore_index=True)
+        # train_labels = train_labels.append([train_labels[train_labels.level == 3]] * 10, ignore_index=True)
+        # train_labels = train_labels.append([train_labels[train_labels.level == 4]] * 10, ignore_index=True)
+        # #shuffle classes:
+        # train_labels = train_labels.iloc[self.random.permutation(len(train_labels))]
 
-        #train_labels = train_labels.append([train_labels[train_labels.level == 1]] * int(n_0/n_1), ignore_index=True)
-        train_labels = train_labels.append([train_labels[train_labels.level == 2]] * 2, ignore_index=True)
-        train_labels = train_labels.append([train_labels[train_labels.level == 3]] * 10, ignore_index=True)
-        train_labels = train_labels.append([train_labels[train_labels.level == 4]] * 10, ignore_index=True)
-        #shuffle classes:
-        train_labels = train_labels.iloc[self.random.permutation(len(train_labels))]
+        self.train_labels = labels.level[self.train_index]
+        self.valid_labels = labels.level[self.valid_index]
         # get train and validation labels
-        self.train_labels = train_labels.level
+        #self.train_labels = train_labels.level
 
         # prepare train and test image files
-        self.train_images = train_labels.image.apply(lambda img:
+        self.train_images = labels.image[self.train_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
         self.valid_images = labels.image[self.valid_index].apply(lambda img:
                                                                  os.path.join(train_path, img + ".png"))
@@ -272,7 +275,7 @@ class DataLoader(object):
 
     def _image_iterator(self, image_list, labels=None, transform=False):
         # allocate an array for images
-        images = np.zeros((self.batch_size, self.image_size, self.image_size, 3), dtype=theano.config.floatX)
+        images = np.zeros((self.batch_size, 1,  self.image_size, self.image_size), dtype=theano.config.floatX)
         n_images = len(image_list)
         n_chunks = int(np.ceil(n_images * 1. / self.batch_size))
         for chunk in xrange(n_chunks):
@@ -284,7 +287,7 @@ class DataLoader(object):
                 if transform:
                     images[i, ...] = self._transform(image)
                 else:
-                    images[i, ...] = imread(image) / 255.
+                    images[i, ...] = (imread(image) / 255.)[np.newaxis, ...]
             if self.norm:
                 images = self.normalize(images)
             # change axis order (see comments in valid_gen function) and yield images with labels
@@ -293,7 +296,8 @@ class DataLoader(object):
                 #print labels[chunk_slice].values.astype(np.float32).reshape(chunk_slice, 1)
                 yield np.rollaxis(images, 3, 1), to_ordinal(labels[chunk_slice].values)
             else:
-                yield np.rollaxis(images, 3, 1)
+                #yield np.rollaxis(images, 3, 1)
+                yield images
         # we need to this if the train set size is not divisible by batch_size
         # if n_images > chunk_end:
         #     imgs_left = n_images - chunk_end
@@ -318,8 +322,8 @@ class DataLoader(object):
             self.valid_worker.terminate()
 
     def get_mean_std(self, images):
-        mean = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
-        mean_sqr = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
+        mean = np.zeros((self.image_size, self.image_size), dtype=np.float32)
+        mean_sqr = np.zeros((self.image_size, self.image_size), dtype=np.float32)
         n_images = len(images)
         for image in images:
             img = imread(image) / 255.
