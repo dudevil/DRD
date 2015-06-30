@@ -31,7 +31,7 @@ void parallel_for(const Iterator& first, const Iterator& last, Function&& f, con
 	std::for_each(threads.begin(), threads.end(), [](std::thread& x){x.join(); });
 }
 
-bool is_local_max(cv::Mat const& current, cv::Mat const& prev, cv::Mat const& next, cv::Point const& loc) -> bool
+bool is_local_max(cv::Mat const& current, cv::Mat const& prev, cv::Mat const& next, cv::Point const& loc)
 {
 	bool const max_in_current =
 		current.at<float>(loc) > current.at<float>(loc + cv::Point(-1, -1)) &&
@@ -77,7 +77,7 @@ int main(int const argc, char const* const argv[])
 	std::string const input_filename(argv[1]);
 	std::string const output_filename(argv[2]);
 	double const thresh = std::stod(argv[3]); // 450.
-	int const points_count = std::stod(argv[4]); // 450.
+	int const points_count = std::stoi(argv[4]); // 450.
 	// read image
 	cv::Mat const img_color = cv::imread(input_filename);
 	cv::Mat img_gray;
