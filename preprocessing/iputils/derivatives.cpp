@@ -17,7 +17,7 @@ namespace {
 		return mat;
 	}
 
-	const size_t derivatives_ksize = 25;
+	const size_t derivatives_ksize = 55;
 }
 
 derivatives_t generate_derivatives(cv::Mat const& image, double const sigma = 1.7)
@@ -25,14 +25,21 @@ derivatives_t generate_derivatives(cv::Mat const& image, double const sigma = 1.
 	CV_Assert(sigma >= 0.9);
 	CV_Assert(image.depth() == CV_32FC1 || image.depth() == CV_32FC3);
 
-	cv::Mat1f gaussian = cv::getGaussianKernel(derivatives_ksize, sigma, CV_32FC1);
+	cv::Mat1f gaussian(derivatives_ksize, 1, 0.0);
+	for (int i = 0; i < derivatives_ksize; ++i) {
+		gaussian.at<float>(i) = std::exp(
+			-1. * 
+			std::pow(double(i - (derivatives_ksize - 1) / 2.), 2.) /
+			(2 * std::pow(sigma, 2.))
+			);
+	}
 	cv::mulTransposed(gaussian, gaussian, false);
 	
 	// result has same depth as input
 	cv::Mat dxx, dxy, dyy;
-	cv::Sobel(gaussian, dxx, -1, 2, 0, 3);
-	cv::Sobel(gaussian, dxy, -1, 1, 1, 3);
-	cv::Sobel(gaussian, dyy, -1, 0, 2, 3);
+	cv::Sobel(gaussian, dxx, -1, 2, 0, 3, 1., 0., cv::BORDER_REPLICATE);
+	cv::Sobel(gaussian, dxy, -1, 1, 1, 3, 1., 0., cv::BORDER_REPLICATE);
+	cv::Sobel(gaussian, dyy, -1, 0, 2, 3, 1., 0., cv::BORDER_REPLICATE);
 
 	derivatives_t result{ dxx.clone(), dxy.clone(), dyy.clone() };
 	cv::filter2D(image, result[0], image.depth(), dxx, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
@@ -51,9 +58,11 @@ cv::Mat detect_blobes(cv::Mat const& image, double const sigma, cv::Mat const& i
 	cv::Mat const& dxy = _derivatives[1];
 	cv::Mat const& dyy = _derivatives[2];
 
-	cv::Mat result = (dxx.mul(dyy) - dxy.mul(dxy)) / std::pow(double(derivatives_ksize), 4);
-	
-	cv::log(result, result);
+	// normalization
+	cv::Mat result = (dxx.mul(dyy) - dxy.mul(dxy)) * std::pow(sigma, 0.5); // / std::pow(sigma, 2.);
+	cv::Mat trace = ((dxx + dyy) < 0.0);
+	trace.convertTo(trace, result.type(), 1. / 255., 0);
+	result = cv::abs(result).mul(trace);
 
 	if (!ignore_mask.empty()) {
 		result.setTo(cv::Scalar::all(0), ~ignore_mask);
