@@ -88,4 +88,4 @@
 * local maxima of the src
 * @param mask an input mask to skip particular elements
 */
-void nonMaximaSuppression(const cv::Mat& src, const int sz, cv::Mat& dst, const cv::Mat mask);
+void nonMaximaSuppression(const cv::Mat& src, const int sz, cv::Mat& dst, cv::Mat const& mask = cv::Mat());

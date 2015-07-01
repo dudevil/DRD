@@ -1,6 +1,6 @@
 #include "nonmaxsup.hpp"
 
-void nonMaximaSuppression(const cv::Mat& src, const int sz, cv::Mat& dst, const cv::Mat mask) {
+void nonMaximaSuppression(const cv::Mat& src, const int sz, cv::Mat& dst, cv::Mat const& mask) {
 
 	// initialise the block mask and destination
 	const int M = src.rows;
