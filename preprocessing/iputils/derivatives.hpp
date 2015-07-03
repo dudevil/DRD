@@ -9,7 +9,7 @@ derivatives_t generate_derivatives(cv::Mat image);
 
 
 struct blob_t {
-	double x, y, strength, circularity, sign;
+	double x, y, sigma, strength, trace;
 	friend std::ostream& operator<<(std::ostream& os, blob_t const& blob);
 };
 
@@ -22,7 +22,7 @@ using blobs_t = std::vector < blob_t > ;
 \param k_size gaussian kernel size
 \return
 */
-blobs_t detect_blobes(cv::Mat const& image, double const k_size = 1.2, double const threshold = 100., cv::Mat const& ignore_mask = cv::Mat());
+blobs_t detect_blobes(cv::Mat const& image, double const k_size = 1.2, double const threshold = 100., bool filter_positive_trace = true);
 
 //! Hessian ridge detector
 /*!

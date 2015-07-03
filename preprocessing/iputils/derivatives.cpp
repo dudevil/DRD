@@ -21,35 +21,37 @@ namespace {
 
 	bool is_local_max(cv::Mat const& current, cv::Mat const& prev, cv::Mat const& next, cv::Point const& loc)
 	{
+		//cv::countNonZero(prev(cv::Rect(loc.x - 1, loc.y - 1, 3, 3))) > current.at<float>(loc);
+		float const center_value = current.at<float>(loc);
 		bool const max_in_current =
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(-1, -1)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(-1, 0)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(-1, 1)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(0, -1)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(0, 1)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(1, -1)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(1, 0)) &&
-			current.at<float>(loc) > current.at<float>(loc + cv::Point(1, 1));
+			center_value > current.at<float>(loc + cv::Point(-1, -1)) &&
+			center_value > current.at<float>(loc + cv::Point(-1, 0)) &&
+			center_value > current.at<float>(loc + cv::Point(-1, 1)) &&
+			center_value > current.at<float>(loc + cv::Point(0, -1)) &&
+			center_value > current.at<float>(loc + cv::Point(0, 1)) &&
+			center_value > current.at<float>(loc + cv::Point(1, -1)) &&
+			center_value > current.at<float>(loc + cv::Point(1, 0)) &&
+			center_value > current.at<float>(loc + cv::Point(1, 1));
 		bool const max_in_prev = prev.empty() ? true :
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(-1, -1)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(-1, 0)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(-1, 1)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(0, -1)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(0, 0)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(0, 1)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(1, -1)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(1, 0)) &&
-			current.at<float>(loc) > prev.at<float>(loc + cv::Point(1, 1));
+			center_value > prev.at<float>(loc + cv::Point(-1, -1)) &&
+			center_value > prev.at<float>(loc + cv::Point(-1, 0)) &&
+			center_value > prev.at<float>(loc + cv::Point(-1, 1)) &&
+			center_value > prev.at<float>(loc + cv::Point(0, -1)) &&
+			center_value > prev.at<float>(loc + cv::Point(0, 0)) &&
+			center_value > prev.at<float>(loc + cv::Point(0, 1)) &&
+			center_value > prev.at<float>(loc + cv::Point(1, -1)) &&
+			center_value > prev.at<float>(loc + cv::Point(1, 0)) &&
+			center_value > prev.at<float>(loc + cv::Point(1, 1));
 		bool const max_in_next = next.empty() ? true :
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(-1, -1)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(-1, 0)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(-1, 1)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(0, -1)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(0, 0)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(0, 1)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(1, -1)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(1, 0)) &&
-			current.at<float>(loc) > next.at<float>(loc + cv::Point(1, 1));
+			center_value > next.at<float>(loc + cv::Point(-1, -1)) &&
+			center_value > next.at<float>(loc + cv::Point(-1, 0)) &&
+			center_value > next.at<float>(loc + cv::Point(-1, 1)) &&
+			center_value > next.at<float>(loc + cv::Point(0, -1)) &&
+			center_value > next.at<float>(loc + cv::Point(0, 0)) &&
+			center_value > next.at<float>(loc + cv::Point(0, 1)) &&
+			center_value > next.at<float>(loc + cv::Point(1, -1)) &&
+			center_value > next.at<float>(loc + cv::Point(1, 0)) &&
+			center_value > next.at<float>(loc + cv::Point(1, 1));
 		return max_in_current && max_in_prev & max_in_next;
 	}
 
@@ -60,7 +62,7 @@ namespace {
 		std::cout << "min: " << min << ", max: " << max << std::endl;
 	};
 
-	const size_t derivatives_ksize = 55;
+//	const size_t derivatives_ksize = 35;
 }
 
 derivatives_t generate_derivatives(cv::Mat const& image, double const sigma = 1.7)
@@ -68,21 +70,27 @@ derivatives_t generate_derivatives(cv::Mat const& image, double const sigma = 1.
 	CV_Assert(sigma >= 0.9);
 	CV_Assert(image.depth() == CV_32FC1 || image.depth() == CV_32FC3);
 
+	const size_t derivatives_ksize = size_t(sigma * 6 + 5);
 	cv::Mat1f gaussian(derivatives_ksize, 1, 0.0);
 	for (int i = 0; i < derivatives_ksize; ++i) {
 		gaussian.at<float>(i) = std::exp(
-			-1. * 
-			std::pow(double(i - (derivatives_ksize - 1) / 2.), 2.) /
+			-std::pow(double(i - (derivatives_ksize - 1) / 2.), 2.) /
 			(2 * std::pow(sigma, 2.))
 			);
 	}
 	cv::mulTransposed(gaussian, gaussian, false);
+	//gaussian /= CV_2PI * std::pow(sigma, 2.0);
 	
 	// result has same depth as input
 	cv::Mat dxx, dxy, dyy;
 	cv::Sobel(gaussian, dxx, -1, 2, 0, 3, 1., 0., cv::BORDER_REPLICATE);
 	cv::Sobel(gaussian, dxy, -1, 1, 1, 3, 1., 0., cv::BORDER_REPLICATE);
 	cv::Sobel(gaussian, dyy, -1, 0, 2, 3, 1., 0., cv::BORDER_REPLICATE);
+
+	//std::cout
+	//	<< dxx.dot(dxx) << '\t'
+	//	<< dyy.dot(dyy) << '\t'
+	//	<< dxy.dot(dxy) << std::endl;
 
 	cv::Mat derivative_xx, derivative_xy, derivative_yy;
 	cv::filter2D(image, derivative_xx, image.depth(), dxx, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
@@ -94,18 +102,24 @@ derivatives_t generate_derivatives(cv::Mat const& image, double const sigma = 1.
 
 std::ostream& operator<<(std::ostream& os, blob_t const& blob)
 {
-	return os << blob.x << "," << blob.y << "," << blob.strength;
+	return os
+		<< blob.x << ","
+		<< blob.y << ","
+		<< blob.sigma << ","
+		<< blob.strength << ","
+		//<< blob.circularity << ","
+		<< blob.trace;
 }
 
-blobs_t detect_blobes(cv::Mat const& image, double const sigma, double const threshold, cv::Mat const& ignore_mask)
+blobs_t detect_blobes(cv::Mat const& image, double const sigma, double const threshold, bool filter_positive_trace)
 {
-	cv::Mat lcn_image = normalize_local_contrast(image, 35);
-	std::vector<derivatives_t> derivatives = {
-		generate_derivatives(lcn_image, 1.0 * sigma),
-		generate_derivatives(lcn_image, 2.0 * sigma),
-		generate_derivatives(lcn_image, 3.0 * sigma),
-		generate_derivatives(lcn_image, 4.0 * sigma)
-	};
+	cv::Mat lcn_image = normalize_local_contrast(image, 29);
+
+	std::vector<double> sigmas = { 1.0 * sigma, 2.0 * sigma, 3.0 * sigma, 4.0 * sigma, 5.0 * sigma };
+
+	std::vector<derivatives_t> derivatives;
+	std::transform(sigmas.cbegin(), sigmas.cend(), std::back_insert_iterator<std::vector<derivatives_t>>(derivatives), 
+		[&lcn_image](double const s){return generate_derivatives(lcn_image, s); });
 
 	// normalization
 	std::vector<cv::Mat> det_of_hessian(derivatives.size());
@@ -118,16 +132,22 @@ blobs_t detect_blobes(cv::Mat const& image, double const sigma, double const thr
 		return (d.dxx + d.dyy);
 	});
 	
+#if 0
 	std::vector<cv::Mat> circularity(derivatives.size());
 	std::transform(det_of_hessian.cbegin(), det_of_hessian.cend(), trace.cbegin(), circularity.begin(), [](cv::Mat const& doh, cv::Mat const& tr) {
-		cv::Mat const disciminato = tr - 4 * doh;
+		cv::Mat const disciminato = tr.mul(tr)/4.0 - doh;
 		cv::sqrt(disciminato, disciminato);
-		cv::Mat h1 = (-tr + disciminato)/2.;
-		cv::Mat h2 = (-tr - disciminato)/2.;
+		cv::Mat h1 = (tr/2 + disciminato);
+		cv::Mat h2 = (tr/2 - disciminato);
 		return cv::abs(cv::min(h1, h2) / cv::max(h1, h2));
 	});
+#endif
 
+#ifdef _DEBUG
+	std::for_each(trace.cbegin(), trace.cend(), say_range);
 	std::for_each(det_of_hessian.cbegin(), det_of_hessian.cend(), say_range);
+#endif
+
 	std::for_each(det_of_hessian.begin(), det_of_hessian.end(), [](cv::Mat& doh){doh.setTo(0.0, doh < 0.0); });
 
 	blobs_t detected_blobs;
@@ -135,13 +155,14 @@ blobs_t detect_blobes(cv::Mat const& image, double const sigma, double const thr
 		for (int j = 1; j < lcn_image.cols - 1; ++j) {
 			cv::Point loc(j, i);
 
-			for (int s = 0; s < det_of_hessian.size(); ++s) {
+			for (int s = 0; s < sigmas.size(); ++s) {
 				auto const& prev = (s - 1) < 0 ? cv::Mat() : det_of_hessian[s - 1];
 				auto const& next = (s + 1) >= det_of_hessian.size() ? cv::Mat() : det_of_hessian[s + 1];
 				bool const local_max = is_local_max(det_of_hessian[s], prev, next, loc);
-				if (local_max && det_of_hessian[s].at<float>(loc) > threshold) {
-					//double x, y, strength, e1, e2, sign;
-					detected_blobs.push_back(blob_t{ loc.x, loc.y, det_of_hessian[s].at<float>(loc), circularity[s].at<float>(loc), trace[s].at<float>(loc) });
+				bool const trace_ok = filter_positive_trace ? trace[s].at<float>(loc) < 0.0 : true;
+				if (local_max && det_of_hessian[s].at<float>(loc) > threshold && trace_ok) {
+					//double x, y, strength, e1, e2, trace;
+					detected_blobs.push_back(blob_t{ loc.x, loc.y, sigmas[s], det_of_hessian[s].at<float>(loc), trace[s].at<float>(loc) });
 				}
 			}
 		}
@@ -150,6 +171,7 @@ blobs_t detect_blobes(cv::Mat const& image, double const sigma, double const thr
 }
 
 #if 0
+// Not working at the moment
 cv::Mat detect_ridges(cv::Mat const& image, double const sigma, cv::Mat const& ignore_mask, derivatives_t& _derivatives)
 {
 	if (_derivatives.empty()) {

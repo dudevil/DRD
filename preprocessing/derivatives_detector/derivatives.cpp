@@ -43,14 +43,14 @@ int main(int const argc, char const* const argv[])
 	std::string const input_filename(argv[1]);
 	std::string const output_filename(argv[2]);
 	double const thresh = std::stod(argv[3]); // 450.
-	int const points_count = std::stoi(argv[4]); // 450.
+	int const filter_positive_trace = std::stoi(argv[4]);
 	// read image
 	cv::Mat const img_color = cv::imread(input_filename);
 	cv::Mat img_gray;
 	cv::cvtColor(img_color, img_gray, CV_BGR2GRAY);
 	img_gray.convertTo(img_gray, CV_32FC1, 1. / 255.);
 
-	blobs_t blobs = detect_blobes(img_gray, 1.2, 400.);
+	blobs_t blobs = detect_blobes(img_gray, 1.7, thresh, filter_positive_trace);
 
 	std::ofstream blobs_list(output_filename + ".csv");
 	std::copy(blobs.cbegin(), blobs.cend(), std::ostream_iterator<blob_t>(blobs_list, "\n"));
@@ -58,7 +58,8 @@ int main(int const argc, char const* const argv[])
 	cv::Mat result = img_color.clone();
 
 	std::for_each(blobs.begin(), blobs.end(), [&result](blob_t const& b) {
-		cv::circle(result, cv::Point(b.x, b.y), std::abs(b.strength) * 0.025, cv::Scalar((b.sign < 0 ? 255 : 0), 255, 0));
+		cv::circle(result, cv::Point(b.x, b.y), std::abs(b.strength) * 0.02, cv::Scalar((b.trace < 0 ? 255 : 0), 255, 0));
+		//cv::ellipse(result, cv::Point(b.x, b.y), cv::Size(int(std::abs(b.strength) * 0.025), int(std::abs(b.strength) * 0.025 * c)), 0.0, 0, 360, cv::Scalar((b.trace < 0 ? 255 : 0), 255, 0));
 	});
 
 	cv::imwrite(output_filename, result);
