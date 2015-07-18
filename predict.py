@@ -51,7 +51,7 @@ if __name__ == "__main__":
                     batch_size=64,
                     parallel=False,
                     train_path="train/trimmed",
-                    test_path=os.path.join("test", "trimmed"))
+                    test_path=os.path.join("train", "trimmed"))
     test_filenames = dl.test_images
     n_predictions = len(test_filenames)
     print("Compiling theano functions...")
@@ -59,6 +59,7 @@ if __name__ == "__main__":
     X = T.tensor4('X')
     X_batch = T.tensor4('X_batch')
     batch_index = T.iscalar('batch_index')
+
 
     #pred = T.iround(output.get_output(X_batch, deterministic=True))
     if args.proba:
@@ -91,4 +92,4 @@ if __name__ == "__main__":
         predictions = get_predictions(predictions)
         save_submission(predictions.flatten(), test_filenames, n=18)
     else:
-        save_submission(predictions, test_filenames, n='18')
+        save_submission(predictions, test_filenames, n='pairsshift_10_trainprobas')

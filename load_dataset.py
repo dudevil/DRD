@@ -57,6 +57,12 @@ class Worker(Process):
         self.mean = mean
         self.std = std
         self.augment = augment
+        # precomputed values
+        # self.eigenvalues = np.array([ 0.00111909, 0.00026734, 0.00020493])
+        # self.U = np.array([[-0.64086777, -0.65354628, -0.4026981 ],
+        #                   [-0.57974576,  0.06820412,  0.81193784],
+        #                   [-0.50317329,  0.7538073,  -0.42260051]])
+
         if proportion:
             assert len(pseudo_images) == len(pseudo_labels)
             self.pseudo_images = images
@@ -94,7 +100,13 @@ class Worker(Process):
             if b:
                 img[:, :, 2] = img[:, :, 2] + self.rng.randint(-30, 30)/255.
 
-            # random shifts
+            # Krizhevsky style color augmentation
+            # samples = np.random.normal(0, 0.1, 3)
+            # noise = np.dot(self.U, (samples * self.eigenvalues).T)
+            # img = img + noise
+
+            # random shifts disabled temp: slows down training too much
+
             shift_x = self.rng.randint(-4, 4)
             shift_y = self.rng.randint(-4, 4)
             shift = transform.SimilarityTransform(translation=[shift_x, shift_y])
@@ -142,7 +154,7 @@ class DataLoader(object):
                  parallel=True,
                  normalize=True,
                  datadir="data",
-                 train_path=os.path.join("train", "resized"),
+                 train_path=os.path.join("train", "trimmed"),
                  test_path=os.path.join("test", "resized"),):
         train_path = os.path.join(datadir, train_path)
         test_path = os.path.join(datadir, test_path)
@@ -151,21 +163,20 @@ class DataLoader(object):
         self.random = np.random.RandomState(random_state)
         self.batch_size = batch_size
         self.parallel = parallel
-        labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
+        #labels = pd.read_csv(os.path.join(datadir, "trainLabels.csv"))
 
         # split the dataset to train and 10% validation (3456 is closest to 10% divisible by batch size 128)
-        sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
-        self.train_index, self.valid_index = list(sss).pop()
+        # sss = StratifiedShuffleSplit(labels.level, 1, test_size=1024*3, random_state=random_state)
+        # self.train_index, self.valid_index = list(sss).pop()
         # self.train_index = self.train_index[:1000]
-
+        train_d = pd.read_csv(os.path.join(datadir, "trainPairs.csv"))
+        val_d = pd.read_csv(os.path.join(datadir, "validationPairs.csv"))
         # get train and validation labels
-        self.train_labels = labels.level[self.train_index]
-        self.valid_labels = labels.level[self.valid_index]
+        self.train_labels = train_d.level
+        self.valid_labels = val_d.level
         # prepare train and test image files
-        self.train_images = labels.image[self.train_index].apply(lambda img:
-                                                                 os.path.join(train_path, img + ".png"))
-        self.valid_images = labels.image[self.valid_index].apply(lambda img:
-                                                                 os.path.join(train_path, img + ".png"))
+        self.train_images = train_d.image.apply(lambda img: os.path.join(train_path, img + ".png"))
+        self.valid_images = val_d.image.apply(lambda img: os.path.join(train_path, img + ".png"))
         self.test_images = [os.path.join(test_path, img) for img in os.listdir(test_path)]
         pseudos = pd.read_csv("data/submissions/submission_90.csv")
         self.pseudo_images = pseudos.iloc[:, 0].apply(lambda img: os.path.join(test_path, img + ".png"))
@@ -192,8 +203,8 @@ class DataLoader(object):
             self.mean = self.std = None
 
         if parallel:
-            self.train_queue = Queue(10)
-            self.valid_queue = Queue(10)
+            self.train_queue = Queue(20)
+            self.valid_queue = Queue(20)
             # get mean and std across training set
             if pseudo_proportion:
                 self.train_worker = Worker(self.train_images,

@@ -13,9 +13,9 @@ from utils import *
 import sys
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 MOMENTUM = 0.9
-MAX_EPOCH = 1
+MAX_EPOCH = 500
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
 LEARNING_RATE_SCHEDULE = {
     0: 0.02,
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     epoch = 0
     _iter = 0
     # wait for at least this many epochs before saving the model
-    min_epochs = 30
+    min_epochs = 10
     # store these values for learning curves plotting
     train_loss = []
     valid_loss = []
@@ -153,8 +153,9 @@ if __name__ == '__main__':
     try:
         # get next chunks of data
         while epoch < MAX_EPOCH:
-            if epoch in LEARNING_RATE_SCHEDULE:
-                learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
+            #if epoch in LEARNING_RATE_SCHEDULE:
+            #    learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
+            learning_rate.set_value(0.02 * 0.995**epoch)
             epoch += 1
             # train the network on all chunks
             batch_train_losses = []
@@ -162,8 +163,8 @@ if __name__ == '__main__':
                 # perform forward pass and parameters update
                 if not len(x_next) == BATCH_SIZE:
                     continue
-                x_shared.set_value(lasagne.utils.floatX(x_next), borrow=True)
-                y_shared.set_value(y_next, borrow=True)
+                x_shared.set_value(lasagne.utils.floatX(x_next))
+                y_shared.set_value(y_next)
                 batch_train_loss = iter_train()
                 batch_train_losses.append(batch_train_loss)
                 #num_train_batches = int(np.ceil(len(x_next) / BATCH_SIZE))
@@ -175,9 +176,10 @@ if __name__ == '__main__':
             #chunk_num = 0
             for valid_x_next, valid_y_next in dloader.valid_gen():
                 # probas = np.zeros((4, valid_x_next.shape[0], 4), dtype=theano.config.floatX)
-
-                x_shared.set_value(lasagne.utils.floatX(valid_x_next), borrow=True)
-                y_shared.set_value(valid_y_next, borrow=True)
+                if not len(valid_x_next) == BATCH_SIZE:
+                    continue
+                x_shared.set_value(lasagne.utils.floatX(valid_x_next))
+                y_shared.set_value(valid_y_next)
                 batch_valid_loss, probs, prediction = iter_valid()
                 batch_valid_losses.append(batch_valid_loss)
                 valid_predictions.extend(get_predictions(prediction))
@@ -199,7 +201,7 @@ if __name__ == '__main__':
                 # valid_predictions.extend(get_predictions(probas.mean(axis=0) > 0.5))
             avg_valid_loss = np.mean(batch_valid_losses)
             vp = np.array(valid_predictions)
-            c_kappa = kappa(dloader.valid_labels, vp)
+            c_kappa = kappa(dloader.valid_labels[:len(valid_predictions)], vp)
             print("|%6d | %9.6f | %14.6f | %14.5f | %1.3f | %6d |" %
                   (epoch,
                    avg_train_loss,
@@ -218,12 +220,20 @@ if __name__ == '__main__':
                 # during early stages of learning
                 if epoch >= min_epochs:
                     save_network(all_layers)
-                    conf_mat = confusion_matrix(dloader.valid_labels, valid_predictions)
-                    imgs_error = make_predictions_series(valid_predictions, dloader.valid_images.values)
+                    conf_mat = confusion_matrix(dloader.valid_labels[:len(valid_predictions)], valid_predictions)
+                    imgs_error = make_predictions_series(valid_predictions, dloader.valid_images.values[:len(valid_predictions)])
                     #imgs_error = images_byerror(valid_predictions, dloader.valid_labels.values, dloader.valid_images.values)
                 best_kappa = c_kappa
                 best_epoch = epoch
                 patience = 10
+            if (epoch % 10) == 0:
+                save_network(all_layers, filename='data/tidy/snapshot_%d.pickle' % epoch)
+                conf_mat = confusion_matrix(dloader.valid_labels[:len(valid_predictions)], valid_predictions)
+                imgs_error = make_predictions_series(valid_predictions, dloader.valid_images.values[:len(valid_predictions)])
+                results = np.array([train_loss, valid_loss, kappa_loss], dtype=np.float)
+                np.save("data/tidy/training_%d.npy" % epoch, results)
+                np.save("data/tidy/confusion_%d.npy" % epoch, conf_mat)
+                imgs_error.to_csv("data/tidy/imgs_error_%d.csv" % epoch)
             else:
                 #decrease patience
                 patience -= 1

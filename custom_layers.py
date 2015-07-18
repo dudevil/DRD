@@ -277,3 +277,28 @@ class ParametrizedReLu(layers.Layer):
         return [self.a]
 
 
+class TiedDropoutLayer(layers.Layer):
+    """
+    Dropout layer that broadcasts the mask across all axes beyond the first two.
+    """
+    def __init__(self, input_layer, p=0.5, rescale=True, random_state=12):
+        super(TiedDropoutLayer, self).__init__(input_layer)
+        self.p = p
+        self.rescale = rescale
+        self.rng = RandomStreams(seed=random_state)
+
+    def get_output_for(self, input, deterministic=False, *args, **kwargs):
+        if deterministic or self.p == 0:
+            return input
+        else:
+            retain_prob = 1 - self.p
+            if self.rescale:
+                input /= retain_prob
+
+            mask = self.rng.binomial(self.input_shape[:2], p=retain_prob,
+                                  dtype=theano.config.floatX)
+            axes = [0, 1] + (['x'] * (input.ndim - 2))
+            mask = mask.dimshuffle(*axes)
+            return input * mask
+
+
