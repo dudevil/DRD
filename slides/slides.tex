@@ -1,5 +1,6 @@
 \documentclass{beamer}
 \setbeamertemplate{navigation symbols}{}
+%\usetheme{m}
 
 \usepackage{beamerthemeshadow}
 \usepackage{nth}
@@ -39,12 +40,22 @@
 
 \section{Overview} 
 
-\begin{frame}
-\subsection{Competition Details}\frametitle{} 
+\subsection{Competition Details}
+\begin{frame}\frametitle{Data} 
 \par Goal: Identify signs of diabetic retinopathy in eye images \\~\\
+\par 35126 images = 17563 pairs for training
+\par 53576 images in test set
+\par 3 channel images
+\par Images are big: 2500x2000
+\par Evaluation: quadratic weighted kappa
 \end{frame}
 
 \subsection{Competition Results}
+\begin{frame}\frametitle{} 
+\par final leaderboard
+\par + provide leaderboard histogram
+\par + plot score over time
+\end{frame}
 
 
 \section{Approach} 
@@ -112,16 +123,17 @@
 \end{frame}
 
 \subsection{Network configuration}
-
-Slice rotate
-Merge
-Output
+\begin{frame}\frametitle{}
+\par Slice rotate
+\par Merge
+\par Output
+\end{frame}
 
 \subsection{Decision making}
 
 \begin{frame}\frametitle{}
-Predict score for eyes independently
-Final score = max(left, right)
+\par Predict score for eyes independently
+\par Final score = max(left, right)
 \end{frame}
 
 \section{Winning approaches} 
