@@ -43,10 +43,14 @@
 \subsection{Competition Details}
 \begin{frame}\frametitle{Data} 
 \par Goal: Identify signs of diabetic retinopathy in eye images \\~\\
-\par 35126 images = 17563 pairs for training
+\par Given: 35126 images = 17563 pairs for training
 \par 53576 images in test set
 \par 3 channel images
 \par Images are big: 2500x2000
+\par Size: XXGb
+\end{frame}
+
+\begin{frame}\frametitle{Quality metric} 
 \par Evaluation: quadratic weighted kappa
 \end{frame}
 
@@ -58,8 +62,15 @@
 \end{frame}
 
 
-\section{Approach} 
-\subsection{Data preprocessing}
+\section{Solution}
+
+\begin{frame}\frametitle{Domain knowledge}
+\par \includegraphics[interpolate=true,valign=c,width=0.5\textwidth]{pics/symptoms_pic.png}
+\par \hyperlink{https://goo.gl/s5lMt8}{Google Docs: https://goo.gl/s5lMt8}
+\end{frame}
+
+\subsection{Data preparation}
+
 \begin{frame}\frametitle{Preprocessing}
 
 \begin{enumerate}
@@ -137,116 +148,126 @@
 \end{frame}
 
 \section{Winning approaches} 
-\subsection{\nth{1} place}
-\subsection{\nth{2} place}
-\subsection{\nth{3} place}
+%\subsection{\nth{1} place}
+\begin{frame}\frametitle{\nth{1} place}
+\end{frame}
+%\subsection{\nth{2} place}
+\begin{frame}\frametitle{\nth{2} place}
+\end{frame}
+%\subsection{\nth{3} place}
+\begin{frame}\frametitle{\nth{3} place}
+\end{frame}
 
 \section{Conclusions}
-
+\begin{frame}\frametitle{Conclusions}
+\end{frame}
 %
 %
 % Back up
 % There are examples below to use in slides
 %
 
-\section{Back Up}
-
-\begin{frame}\frametitle{Tables}
-\begin{tabular}{|c|c|c|}
-\hline
-\textbf{Date} & \textbf{Instructor} & \textbf{Title} \\
-\hline
-WS 04/05 & Sascha Frank & First steps with  \LaTeX  \\
-\hline
-SS 05 & Sascha Frank & \LaTeX \ Course serial \\
-\hline
-\end{tabular}
-\end{frame}
-
-%\subsection{blocs}
-\begin{frame}\frametitle{blocs}
-
-\begin{block}{title of the bloc1}
-bloc text
-\end{block}
-
-\begin{exampleblock}{title of the bloc2}
-bloc text
-\end{exampleblock}
-
-
-\begin{alertblock}{title of the bloc3}
-bloc text
-\end{alertblock}
-
-\end{frame}
-
-%\subsection{split screen}
-
-\begin{frame}\frametitle{splitting screen}
-\begin{columns}
-\begin{column}{5cm}
-\begin{itemize}
-\item Beamer 
-\item Beamer Class 
-\item Beamer Class Latex 
-\end{itemize}
-\end{column}
-\begin{column}{5cm}
-\begin{tabular}{|c|c|}
-\hline
-\textbf{Instructor} & \textbf{Title} \\
-\hline
-Sascha Frank &  \LaTeX \ Course 1 \\
-\hline
-Sascha Frank &  Course serial  \\
-\hline
-\end{tabular}
-\end{column}
-\end{columns}
-\end{frame}
-
-%\subsection{Pictures} 
-\begin{frame}\frametitle{pictures in latex beamer class}
-\begin{figure}
-\includegraphics[scale=0.5]{pics/10_left.jpeg} 
-\caption{show an example picture}
-\end{figure}
-\end{frame}
-
-%\subsection{joining picture and lists} 
-
-\begin{frame}
-\frametitle{pictures and lists in beamer class}
-\begin{columns}
-\begin{column}{5cm}
-\begin{itemize}
-\item<1-> subject 1
-\item<3-> subject 2
-\item<5-> subject 3
-\end{itemize}
-\vspace{3cm} 
-\end{column}
-\begin{column}{5cm}
-\begin{overprint}
-\includegraphics<2>[width=2.5cm]{pics/10_left.jpeg}
-\includegraphics<4>[width=2.5cm]{pics/10_left.jpeg}
-\includegraphics<6>[width=2.5cm]{pics/10_left.jpeg}
-\end{overprint}
-\end{column}
-\end{columns}
-\end{frame}
-
-
-%\subsection{pictures which need more space} 
-\begin{frame}[plain]
-\frametitle{plain, or a way to get more space}
-\begin{figure}
-\includegraphics[scale=0.25]{pics/10_left.jpeg} 
-\caption{show an example picture}
-\end{figure}
-\end{frame}
-
-
-
+%\section{Back Up}
+%
+%\begin{frame}\frametitle{Tables}
+%\begin{tabular}{|c|c|c|}
+%\hline
+%\textbf{Date} & \textbf{Instructor} & \textbf{Title} \\
+%\hline
+%WS 04/05 & Sascha Frank & First steps with  \LaTeX  \\
+%\hline
+%SS 05 & Sascha Frank & \LaTeX \ Course serial \\
+%\hline
+%\end{tabular}
+%\end{frame}
+%
+%%\subsection{blocs}
+%\begin{frame}\frametitle{blocs}
+%
+%\begin{block}{title of the bloc1}
+%bloc text
+%\end{block}
+%
+%\begin{exampleblock}{title of the bloc2}
+%bloc text
+%\end{exampleblock}
+%
+%
+%\begin{alertblock}{title of the bloc3}
+%bloc text
+%\end{alertblock}
+%
+%\end{frame}
+%
+%%\subsection{split screen}
+%
+%\begin{frame}\frametitle{splitting screen}
+%\begin{columns}
+%\begin{column}{5cm}
+%\begin{itemize}
+%\item Beamer 
+%\item Beamer Class 
+%\item Beamer Class Latex 
+%\end{itemize}
+%\end{column}
+%\begin{column}{5cm}
+%\begin{tabular}{|c|c|}
+%\hline
+%\textbf{Instructor} & \textbf{Title} \\
+%\hline
+%Sascha Frank &  \LaTeX \ Course 1 \\
+%\hline
+%Sascha Frank &  Course serial  \\
+%\hline
+%\end{tabular}
+%\end{column}
+%\end{columns}
+%\end{frame}
+%
+%%\subsection{Pictures} 
+%\begin{frame}\frametitle{pictures in latex beamer class}
+%\begin{figure}
+%\includegraphics[scale=0.5]{pics/10_left.jpeg} 
+%\caption{show an example picture}
+%\end{figure}
+%\end{frame}
+%
+%%\subsection{joining picture and lists} 
+%
+%\begin{frame}
+%\frametitle{pictures and lists in beamer class}
+%\begin{columns}
+%\begin{column}{5cm}
+%\begin{itemize}
+%\item<1-> subject 1
+%\item<3-> subject 2
+%\item<5-> subject 3
+%\end{itemize}
+%\vspace{3cm} 
+%\end{column}
+%\begin{column}{5cm}
+%\begin{overprint}
+%\includegraphics<2>[width=2.5cm]{pics/10_left.jpeg}
+%\includegraphics<4>[width=2.5cm]{pics/10_left.jpeg}
+%\includegraphics<6>[width=2.5cm]{pics/10_left.jpeg}
+%\end{overprint}
+%\end{column}
+%\end{columns}
+%\end{frame}
+%
+%
+%%\subsection{pictures which need more space} 
+%\begin{frame}[plain]
+%\frametitle{plain, or a way to get more space}
+%\begin{figure}
+%\includegraphics[scale=0.25]{pics/10_left.jpeg} 
+%\caption{show an example picture}
+%\end{figure}
+%\end{frame}
+%
+%
+%
+%
+%
+%
 \end{document}
