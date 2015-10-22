@@ -21,6 +21,14 @@
   {\begin{itemize} \item[] #2 \end{itemize}}
 }
 
+\setbeamertemplate{caption}{\raggedright\insertcaption\par}
+
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+
 \begin{document}
 \title{Diabetic Retinopathy Detection}
 \subtitle{}  
@@ -42,12 +50,40 @@
 
 \subsection{Competition Details}
 \begin{frame}\frametitle{Data} 
-\par Goal: Identify signs of diabetic retinopathy in eye images \\~\\
-\par Given: 35126 images = 17563 pairs for training
-\par 53576 images in test set
-\par 3 channel images
+\par Goal: Identify signs of diabetic retinopathy in eye images
+\par Given: 35126 images for training, 53576 images in test set
 \par Images are big: 2500x2000
-\par Size: XXGb
+\par Data size: XXGb
+
+%0	Normal	25810 73.48\%
+%1	Mild NPDR 2443 6.96\%
+%2	Moderate NPDR 5292 15.07\%
+%3	Severe NPDR 873 2.48\%
+%4	PDR 708 2.01\%
+
+\setlength\tabcolsep{0pt}
+\renewcommand{\arraystretch}{0.1}
+
+\begin{tabular}{|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|}
+\hline
+
+	\includegraphics[width=\linewidth]{pics/197_left_0.jpg} &
+	\includegraphics[width=\linewidth]{pics/257_left_2.jpg} &
+	\includegraphics[width=\linewidth]{pics/328_right_3.jpg} &
+	\includegraphics[width=\linewidth]{pics/328_right_3.jpg} &
+	\includegraphics[width=\linewidth]{pics/326_left_4.jpg} \\
+  
+\hline
+
+Normal & Mild & Moderate & Severe & Proliferative \\
+
+
+\hline
+73.48\% 25810 & 6.96\% 2443 & 15.07\% 5292 & 2.48\% 873 & 2.01\% 708 \\
+
+\hline
+\end{tabular}
+
 \end{frame}
 
 \begin{frame}\frametitle{Quality metric} 
