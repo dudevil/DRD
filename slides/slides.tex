@@ -5,6 +5,7 @@
 \usepackage{beamerthemeshadow}
 \usepackage{nth}
 \usepackage[export]{adjustbox}
+\usepackage{tikz}
 
 \def\beamer@andinst{\quad}
 \makeatother
@@ -28,6 +29,13 @@
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 
+\newcommand{\specialcell}[2][c]{\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\newcommand{\nomargincell}[2][c]{
+	\setlength\tabcolsep{0pt}
+	\renewcommand{\arraystretch}{0.1}
+	\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}
+	}
 
 \begin{document}
 \title{Diabetic Retinopathy Detection}
@@ -46,51 +54,68 @@
 \end{frame} 
 
 
+
+% % % %
+% % % % Overview
+% % % %
 \section{Overview} 
 
 \subsection{Competition Details}
 \begin{frame}\frametitle{Data} 
-\par Goal: Identify signs of diabetic retinopathy in eye images
-\par Given: 35126 images for training, 53576 images in test set
+\par \textbf{Goal}: Identify signs of diabetic retinopathy in eye images
+\par \textbf{Given}: 35126 images for training, 53576 images in test set
 \par Images are big: 2500x2000
-\par Data size: XXGb
+\par Compressed data size: 88Gb
 
-%0	Normal	25810 73.48\%
-%1	Mild NPDR 2443 6.96\%
-%2	Moderate NPDR 5292 15.07\%
-%3	Severe NPDR 873 2.48\%
-%4	PDR 708 2.01\%
+\vspace{5pt}
 
-\setlength\tabcolsep{0pt}
-\renewcommand{\arraystretch}{0.1}
-
-\begin{tabular}{|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|C{0.2\textwidth}|}
+\begin{tabular}{|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
 \hline
-
-	\includegraphics[width=\linewidth]{pics/197_left_0.jpg} &
-	\includegraphics[width=\linewidth]{pics/257_left_2.jpg} &
-	\includegraphics[width=\linewidth]{pics/328_right_3.jpg} &
-	\includegraphics[width=\linewidth]{pics/328_right_3.jpg} &
-	\includegraphics[width=\linewidth]{pics/326_left_4.jpg} \\
-  
+	\includegraphics[width=0.2\textwidth]{pics/197_left_0.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/257_left_2.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/328_right_3.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/328_right_3.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/326_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
 \hline
 
 Normal & Mild & Moderate & Severe & Proliferative \\
 
-
 \hline
-73.48\% 25810 & 6.96\% 2443 & 15.07\% 5292 & 2.48\% 873 & 2.01\% 708 \\
+ \specialcell{25810\\ \footnotesize{73.48\%}}  & 
+ \specialcell{2443\\\footnotesize6.96\%} & 
+ \specialcell{5292\\\footnotesize15.07\%} & 
+ \specialcell{873\\\footnotesize2.48\%} & 
+ \specialcell{708\\\footnotesize2.01\%} \\
 
 \hline
 \end{tabular}
 
 \end{frame}
 
-\begin{frame}\frametitle{Quality metric} 
-\par Evaluation: quadratic weighted kappa
+\begin{frame}\frametitle{Quality metric: quadratic weighted kappa} 
+
+\footnotesize { % TODO: rewrite
+Images have five possible ratings, 0,1,2,3,4.  Each image is characterized by a tuple $ (e_a,e_b) $, which corresponds to its scores by $Rater A$ (human) and $Rater B$ (predicted).  The quadratic weighted kappa is calculated as follows. First, an $N\times N$ histogram matrix $O$ is constructed, such that $O_{i,j}$ corresponds to the number of images that received a rating $i$ by $A$ and a rating $j$ by $B$. An $N\times N$ matrix of weights, $w$, is calculated based on the difference between raters' scores:
+
+\[ w_{i,j} = \frac{\left(i-j\right)^2}{\left(N-1\right)^2} \]
+
+An $N\times N$ histogram matrix of expected ratings, $E$, is calculated, assuming that there is no correlation between rating scores.  This is calculated as the outer product between each rater's histogram vector of ratings, normalized such that $E$ and $O$ have the same sum.
+
+From these three matrices, the quadratic weighted kappa is calculated as: 
+
+\[ \kappa=1-\frac{\sum_{i,j}w_{i,j}O_{i,j}}{\sum_{i,j}w_{i,j}E_{i,j}}. \]
+}
+
 \end{frame}
 
 \subsection{Competition Results}
+
+\begin{frame}\frametitle{} 
+\begin{center}
+\includegraphics[width=\textwidth]{pics/LB_private.png}
+\end{center}
+\end{frame}
+
 \begin{frame}\frametitle{} 
 \par final leaderboard
 \par + provide leaderboard histogram
@@ -98,66 +123,80 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 \end{frame}
 
 
+
+
+% % % %
+% % % % Solution
+% % % %
 \section{Solution}
 
-\begin{frame}\frametitle{Domain knowledge}
+\begin{frame}\frametitle{Domain knowledge: diabetic retinopathy symptoms}
+
+\small Was prepared with assistance of ophthalmologist (Vera Shevchenko)
+
+\begin{center}
 \par \includegraphics[interpolate=true,valign=c,width=0.5\textwidth]{pics/symptoms_pic.png}
+\vspace{5pt}
 \par \hyperlink{https://goo.gl/s5lMt8}{Google Docs: https://goo.gl/s5lMt8}
+\end{center}
+
 \end{frame}
 
 \subsection{Data preparation}
 
+
 \begin{frame}\frametitle{Preprocessing}
+\begin{columns}
 
-\begin{enumerate}
+\begin{column}{9cm}
+\begin{itemize}
 \item Crop black borders
-\item Resize
+\vspace{20pt}
+
+\item Extent to square + resize
+\vspace{20pt}
+
 \item Optionally: crop internal square
-\item Optionally: Local Contrast Normalization (LCN) $ \hat{I}_{x,y} = \frac{I_{x,y} - \mu_{x,y}}{\sigma_{x,y}} $
-\end{enumerate}
+\vspace{20pt}
 
-\end{frame}
+\item Optionally: Local Contrast Normalization (LCN) \\ 
+      $ \hat{I}_{x,y} = \frac{I_{x,y} - \mu_{x,y}}{\sigma_{x,y}} $
+\end{itemize}
+\end{column}
 
-\begin{frame}{Preprocessing}
+\begin{column}{6cm}
+\begin{tabular}{ @{}c m{0.25cm} c }
 
-  \parallelcontent
-  {} %\textcolor{red}{\rule{\linewidth}{4pt} foo}}
-  {} %\textcolor{blue}{\rule{\linewidth}{4pt} bar}}
-  \parallelitem
-  {Crop black borders}
-  { \begin{figure}[!ht]
-    \centering
-	\adjustbox{valign=m}{  \includegraphics[valign=c,height=0.5cm]{pics/10_left.jpeg} }
-    \adjustbox{valign=m}{ $\rightarrow$ }
-    \adjustbox{valign=m}{ \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} }
-  \end{figure} }
-  \parallelitem
-  {Resize}
-  {\begin{figure}[!ht]
-      \centering
-  	\adjustbox{valign=m}{  \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} }
-      \adjustbox{valign=m}{ $\rightarrow$ }
-      \adjustbox{valign=m}{ \includegraphics[valign=c,height=0.25cm]{pics/10_left.png} }
-    \end{figure}}
-  \parallelitem
-  {Optionally: crop inscribed square}
-  {\begin{figure}[!ht]
-        \centering
-    	\adjustbox{valign=m}{  \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} }
-        \adjustbox{valign=m}{ $\rightarrow$ }
-        \adjustbox{valign=m}{ \includegraphics[valign=c,height=0.5cm]{pics/10_left_inner.png} }
-      \end{figure}}
-  \parallelitem
-  {Optionally: Local Contrast Normalization (LCN) }
-%  $ \hat{I}_{x,y} = \frac{I_{x,y} - \mu_{x,y}}{\sigma_{x,y}} $}
-  { \begin{figure}[!ht]
-      \centering
-  	\adjustbox{valign=m}{  \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} }
-      \adjustbox{valign=m}{ $\rightarrow$ }
-      \adjustbox{valign=m}{ \includegraphics[valign=c,height=0.5cm]{pics/10_left_lcn.png} }
-    \end{figure}
-  }
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.jpeg} & $\rightarrow$ &
+    \includegraphics[valign=c,height=0.5cm]{pics/10_left.png}
+    \vspace{10pt} \\ 
+    
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+    \includegraphics[valign=c,height=0.25cm]{pics/10_left.png}
+	\vspace{10pt} \\ 	
 
+	\adjustbox{valign=c}{\begin{tikzpicture}
+	    \node[anchor=south west,inner sep=0] (image) at (0,0) {\includegraphics[valign=c,height=0.5cm]{pics/10_left.png}};
+	        \begin{scope}[x={(image.south east)},y={(image.north west)}]
+	            \draw[red] (0,0.5) -- (0.5,1) -- (1,0.5) -- (0.5,0) -- (0,0.5);
+	        \end{scope}
+	\end{tikzpicture}} & $\rightarrow$ &
+	    \includegraphics[valign=c,height=0.5cm]{pics/10_left_inner.png}
+    \vspace{10pt} \\
+
+%    \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+%    \includegraphics[valign=c,height=0.5cm]{pics/10_left_inner.png}
+%	\vspace{10pt} \\
+
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left_lcn.png}
+	\\
+
+
+\end{tabular}
+\end{column}
+
+\end{columns}
 \end{frame}
 
 \begin{frame}\frametitle{Augmentation}
@@ -183,7 +222,14 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 \par Final score = max(left, right)
 \end{frame}
 
-\section{Winning approaches} 
+
+
+
+
+% % % %
+% % % % Winner's approaches
+% % % %
+\section{Winner's approaches} 
 %\subsection{\nth{1} place}
 \begin{frame}\frametitle{\nth{1} place}
 \end{frame}
@@ -194,9 +240,33 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 \begin{frame}\frametitle{\nth{3} place}
 \end{frame}
 
+
+
+
+
+
+
+
+
+% % % %
+% % % % Conclusions
+% % % %
 \section{Conclusions}
 \begin{frame}\frametitle{Conclusions}
 \end{frame}
+
+
+
+
+
+
+
+
+
+
+
+
+
 %
 %
 % Back up
@@ -306,4 +376,5 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 %
 %
 %
+
 \end{document}
