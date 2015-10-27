@@ -13,7 +13,7 @@ from utils import *
 import sys
 
 IMAGE_SIZE = 128
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 MOMENTUM = 0.9
 MAX_EPOCH = 500
 #LEARNING_RATE_SCHEDULE = dict(enumerate(np.logspace(-5.6, -10, MAX_EPOCH, base=2., dtype=theano.config.floatX)))
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     #                                                aggregation='sum')
     objective = lasagne.objectives.Objective(output,
                                              loss_function=lasagne.objectives.mse)
-    mask = np.array([1, 2, 3, 4], dtype=theano.config.floatX)
+    #mask = np.array([1, 2, 3, 4], dtype=theano.config.floatX)
     loss_train = objective.get_loss(X_batch, target=y_batch)
     
     loss_eval = objective.get_loss(X_batch, target=y_batch,
@@ -153,9 +153,9 @@ if __name__ == '__main__':
     try:
         # get next chunks of data
         while epoch < MAX_EPOCH:
-            #if epoch in LEARNING_RATE_SCHEDULE:
-            #    learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
-            learning_rate.set_value(0.02 * 0.995**epoch)
+            if epoch in LEARNING_RATE_SCHEDULE:
+                learning_rate.set_value(LEARNING_RATE_SCHEDULE[epoch])
+            #learning_rate.set_value(0.02 * 0.995**epoch)
             epoch += 1
             # train the network on all chunks
             batch_train_losses = []

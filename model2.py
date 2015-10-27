@@ -26,23 +26,23 @@ slicerot = SliceRotateLayer(input)
 conv1 = dnn.Conv2DDNNLayer(slicerot,
                            num_filters=64,
                            filter_size=(5, 5),
-                           W=lasagne.init.Orthogonal(gain='relu'),
+#                           W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu)
 pool1 = dnn.MaxPool2DDNNLayer(conv1, (3, 3), stride=(2, 2))
 
 conv2_dropout = lasagne.layers.DropoutLayer(pool1, p=0.1)
 conv2 = dnn.Conv2DDNNLayer(conv2_dropout,
-                           num_filters=96,
+                           num_filters=64,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
+#                           W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu,
                            border_mode='same')
 
 conv3_dropout = lasagne.layers.DropoutLayer(conv2, p=0.2)
 conv3 = dnn.Conv2DDNNLayer(conv3_dropout,
-                           num_filters=96,
+                           num_filters=64,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
+#                           W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu,
                            border_mode='same')
 
@@ -52,9 +52,9 @@ pool2 = dnn.MaxPool2DDNNLayer(conv3, (3, 3), stride=(2, 2))
 
 conv4_dropout = lasagne.layers.DropoutLayer(pool2, p=0.3)
 conv4 = dnn.Conv2DDNNLayer(conv4_dropout,
-                           num_filters=128,
+                           num_filters=96,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
+#                           W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu,
                            border_mode='same')
 pool4 = dnn.MaxPool2DDNNLayer(conv4, (3, 3), stride=(2, 2))
@@ -63,7 +63,7 @@ conv5_dropout = lasagne.layers.DropoutLayer(pool4, p=0.4)
 conv5 = dnn.Conv2DDNNLayer(conv5_dropout,
                            num_filters=128,
                            filter_size=(3, 3),
-                           W=lasagne.init.Orthogonal(gain='relu'),
+#                           W=lasagne.init.Orthogonal(gain='relu'),
                            nonlinearity=leaky_relu,
                            border_mode='same')
 
