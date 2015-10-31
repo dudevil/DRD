@@ -1,8 +1,13 @@
 \documentclass{beamer}
 \setbeamertemplate{navigation symbols}{}
-%\usetheme{m}
 
-\usepackage{beamerthemeshadow}
+%\usepackage{beamerthemeshadow}
+\usetheme{CambridgeUS}
+\usecolortheme{beaver}
+\setbeamerfont{frametitle}{size=\small}
+
+\usepackage{xcolor}
+
 \usepackage{nth}
 \usepackage[export]{adjustbox}
 \usepackage{tikz}
@@ -31,11 +36,16 @@
 
 \newcommand{\specialcell}[2][c]{\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
 
+\newcommand{\includepatches}[1]{
+	\includegraphics[width=0.13\textwidth]{pics/blobs/#1}
+}
+
 \newcommand{\nomargincell}[2][c]{
 	\setlength\tabcolsep{0pt}
 	\renewcommand{\arraystretch}{0.1}
 	\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}
 	}
+
 
 \begin{document}
 \title{Diabetic Retinopathy Detection}
@@ -71,11 +81,11 @@
 
 \begin{tabular}{|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
 \hline
-	\includegraphics[width=0.2\textwidth]{pics/197_left_0.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/204_right_1.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/257_left_2.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/328_right_3.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/326_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
 \hline
 
 Normal & Mild & Moderate & Severe & Proliferative \\
@@ -118,21 +128,11 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 \end{center}
 \end{frame}
 
-
-%\begin{center}
-%\includegraphics[width=\textwidth]{pics/LB_private.png}
-%\end{center}
-%\pause
-%\begin{center}
-%\includegraphics[width=\textwidth]{pics/private_lb_distribution.pdf}
-%\end{center}
+%\begin{frame}\frametitle{} 
+%\par final leaderboard
+%\par + provide leaderboard histogram
+%\par + plot score over time
 %\end{frame}
-
-\begin{frame}\frametitle{} 
-\par final leaderboard
-\par + provide leaderboard histogram
-\par + plot score over time
-\end{frame}
 
 
 
@@ -235,7 +235,145 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 \end{frame}
 
 
+\subsection{Microaneurysm detection}
+\begin{frame}\frametitle{Bag of visual words}
+\par Detector: Hessian blob detector
+\par Feature extractors: HOG, LBP
+\par Examples of found blobs: negatives and positives
+\par per-class plots of features after PCA
+\par conclusion: not worked :-(
+\end{frame}
 
+\begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian}
+By considering the scale-normalized determinant of the Hessian, also referred to as the 
+\[ \operatorname{det} HL(x, y; t) = t^2 (L_{xx} L_{yy} - L_{xy}^2) \]
+where $HL$ denotes the Hessian matrix of $L$ and then detecting scale-space maxima of this operator one obtains another straightforward differential blob detector with automatic scale selection which also responds to saddles
+
+\[(\hat{x}, \hat{y}; \hat{t}) = \operatorname{argmaxlocal}_{(x, y; t)}(\operatorname{det} H L(x, y; t))\]
+\end{frame}
+
+\begin{frame}\frametitle{Microaneurysm candidates}
+\centering
+\only<1>{
+\begin{tabular}{|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
+\hline
+
+Normal & Mild & Moderate & Severe & Proliferative \\
+
+\hline
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
+\hline
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0_blobs.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1_blobs.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2_blobs.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3_blobs.jpg} &
+	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4_blobs.jpg} \\
+
+\end{tabular}
+}
+
+\only<2>{
+	\includegraphics[width=0.7\textwidth]{pics/classified_samples/82_right_2.jpg}
+}
+
+\only<3>{
+	\includegraphics[width=0.7\textwidth]{pics/classified_samples/82_right_2_blobs.jpg}
+}
+	
+\end{frame}
+
+\begin{frame}\frametitle{How blobs looks}
+
+\begin{center}
+\begin{tabular}{| b{0.15\linewidth} |@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
+\hline
+strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
+
+\hline
+$[300,450)$ & 
+	\includepatches{patches_300_450_1_2_raw.pdf} & 
+	\includepatches{patches_300_450_3_4_raw.pdf} & 
+	\includepatches{patches_300_450_5_6_raw.pdf} & 
+	\includepatches{patches_300_450_6_7_raw.pdf} & 
+	\includepatches{patches_300_450_7_9_raw.pdf} \\
+
+\hline
+$[450, 600)$ & 
+	\includepatches{patches_450_600_1_2_raw.pdf} & 
+	\includepatches{patches_450_600_3_4_raw.pdf} & 
+	\includepatches{patches_450_600_5_6_raw.pdf} & 
+	\includepatches{patches_450_600_6_7_raw.pdf} & 
+	\includepatches{patches_450_600_7_9_raw.pdf} \\
+	
+\hline
+$[600, 750)$ & 
+	\includepatches{patches_600_750_1_2_raw.pdf} & 
+	\includepatches{patches_600_750_3_4_raw.pdf} & 
+	\includepatches{patches_600_750_5_6_raw.pdf} & 
+	\includepatches{patches_600_750_6_7_raw.pdf} & 
+	\includepatches{patches_600_750_7_9_raw.pdf} \\
+
+\hline
+$[750, \infty)$ & 
+	\includepatches{patches_750_5000_1_2_raw.pdf} & 
+	\includepatches{patches_750_5000_3_4_raw.pdf} & 
+	\includepatches{patches_750_5000_5_6_raw.pdf} & 
+	\includepatches{patches_750_5000_6_7_raw.pdf} & 
+	\\
+
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+\begin{frame}\frametitle{How blobs looks}
+
+\begin{center}
+\begin{tabular}{| b{0.15\linewidth} |@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
+\hline
+strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
+
+\hline
+$[300,450)$ & 
+	\includepatches{patches_300_450_1_2_scaled.pdf} & 
+	\includepatches{patches_300_450_3_4_scaled.pdf} & 
+	\includepatches{patches_300_450_5_6_scaled.pdf} & 
+	\includepatches{patches_300_450_6_7_scaled.pdf} & 
+	\includepatches{patches_300_450_7_9_scaled.pdf} \\
+
+\hline
+$[450, 600)$ & 
+	\includepatches{patches_450_600_1_2_scaled.pdf} & 
+	\includepatches{patches_450_600_3_4_scaled.pdf} & 
+	\includepatches{patches_450_600_5_6_scaled.pdf} & 
+	\includepatches{patches_450_600_6_7_scaled.pdf} & 
+	\includepatches{patches_450_600_7_9_scaled.pdf} \\
+	
+\hline
+$[600, 750)$ & 
+	\includepatches{patches_600_750_1_2_scaled.pdf} & 
+	\includepatches{patches_600_750_3_4_scaled.pdf} & 
+	\includepatches{patches_600_750_5_6_scaled.pdf} & 
+	\includepatches{patches_600_750_6_7_scaled.pdf} & 
+	\includepatches{patches_600_750_7_9_scaled.pdf} \\
+
+\hline
+$[750, \infty)$ & 
+	\includepatches{patches_750_5000_1_2_scaled.pdf} & 
+	\includepatches{patches_750_5000_3_4_scaled.pdf} & 
+	\includepatches{patches_750_5000_5_6_scaled.pdf} & 
+	\includepatches{patches_750_5000_6_7_scaled.pdf} & 
+	\\
+
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
 
 
 % % % %
