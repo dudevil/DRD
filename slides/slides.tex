@@ -235,7 +235,28 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 \end{frame}
 
 
-\subsection{Microaneurysm detection}
+\subsection{Microaneurysm (MA) detection}
+
+\begin{frame}\frametitle{Motivation}
+
+\begin{figure}
+\begin{center}
+\vspace{-25pt}
+\includegraphics[width=0.4\textwidth]{pics/submission_21_inner_squares_conv5_maxout.png}
+\caption{Confusion matrix on 128x128 pixels input}
+\vspace{-15pt}
+\end{center}
+\end{figure}
+
+\par MA have round shape with $2-5$ pixels in radius on $1024\times1024$ image 
+\par MA became invisible after downsampling to 128x128
+\par $\Rightarrow$ Classes 0,1,2 almost indistinguishable due to low resolution
+\vspace{0.5cm}
+\par We have not enough resources\&data to learn on highres images
+\par $\Rightarrow$ Let's try plain old image processing
+
+\end{frame}
+
 \begin{frame}\frametitle{Bag of visual words}
 \par Detector: Hessian blob detector
 \par Feature extractors: HOG, LBP
@@ -245,7 +266,9 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 \end{frame}
 
 \begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian}
-By considering the scale-normalized determinant of the Hessian, also referred to as the 
+\par SHORT INTRO TO HESSIAN BLOB DETECTION
+
+\par By considering the scale-normalized determinant of the Hessian, also referred to as the 
 \[ \operatorname{det} HL(x, y; t) = t^2 (L_{xx} L_{yy} - L_{xy}^2) \]
 where $HL$ denotes the Hessian matrix of $L$ and then detecting scale-space maxima of this operator one obtains another straightforward differential blob detector with automatic scale selection which also responds to saddles
 
@@ -277,11 +300,11 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 }
 
 \only<2>{
-	\includegraphics[width=0.7\textwidth]{pics/classified_samples/82_right_2.jpg}
+	\includegraphics[width=0.65\textwidth]{pics/classified_samples/82_right_2.jpg}
 }
 
 \only<3>{
-	\includegraphics[width=0.7\textwidth]{pics/classified_samples/82_right_2_blobs.jpg}
+	\includegraphics[width=0.65\textwidth]{pics/classified_samples/82_right_2_blobs.jpg}
 }
 	
 \end{frame}
