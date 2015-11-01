@@ -2,28 +2,28 @@
 
 \begin{frame}\frametitle{Motivation I}
 
-\par MAs are early symptoms of diabetic retinopathy
+\par Microaneurysms are early symptoms of diabetic retinopathy
+\vspace{-20pt}
 
 \begin{table}[]
-\centering
-\begin{tabular}{|p{3cm}|p{8cm}|}
+\begin{tabular}{|p{2cm}|p{8cm}|}
 \hline
-Disease severity lvl & Findings observable upon dilated ophthalmoscopy \\ \hline
-None & No abnormalities \\ \hline
-Mild NPDR & \bf{Microaneurysms (MA) only} \\ \hline
-Moderate NPDR & More than just MA but less than severe NPDR \\ \hline
-\multirow{4}{*}{Severe NPDR} & \multirow{4}{*}{\begin{tabular}[c]{@{}l@{}}
-$>$20 intraretinal hemorrhages in each quad \\
-{\bf{or}} Definite venous beading in 2+ quads \\
-{\bf{or}} Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
+Disease level &  Findings observable upon dilated ophthalmoscopy \\ \hline
+\footnotesize None &  No abnormalities \\ \hline
+\footnotesize Mild NPDR & { Microaneurysms only} \\ \hline
+\footnotesize Moderate NDPR &  More than just MA but less than severe NPDR \\ \hline
+\multirow{4}{*}{\footnotesize Severe NPDR} & \multirow{4}{*}{\begin{tabular}[c]{@{}l@{}}
+ $>$20 intraretinal hemorrhages in each quad \\
+or  Definite venous beading in 2+ quads \\
+or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
  &  \\
  &  \\
  &  \\ \hline
-PDR & \begin{tabular}[c]{@{}l@{}}Neovascularization\\ {\bf{or/and}} Vitreous/preretinal hemorrhage\end{tabular} \\ \hline
+\footnotesize PDR & \begin{tabular}[c]{@{}l@{}} Neovascularization\\  or/and Vitreous/preretinal hemorrhage\end{tabular} \\ \hline
 \end{tabular}
 \end{table}
 
-\par \href{http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}{International Clinical Diabetic Retinopathy Disease Severity Scale, Detailed Table: http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}
+\par \href{http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}{\footnotesize International Clinical Diabetic Retinopathy Disease Severity Scale, Detailed Table:  http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}
 
 \end{frame}
 
@@ -39,10 +39,9 @@ PDR & \begin{tabular}[c]{@{}l@{}}Neovascularization\\ {\bf{or/and}} Vitreous/pre
 \end{center}
 \end{figure}
 
-\par MA have round shape with $2-5$ pixels in radius on $1024\times1024$ image 
+\par MA have round shape with 2-5 pixels in radius on 1024x1024 image 
 \par MA became invisible after downsampling to 128x128/256x256
 \par $\Rightarrow$ Classes 0,1,2 almost indistinguishable due to low resolution
-\vspace{0.5cm}
 \par We have not enough resources\&data to learn on highres images
 \par $\Rightarrow$ Let's try plain old image processing
 
@@ -186,5 +185,23 @@ $[750, \infty)$ &
 
 \hline
 \end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}\frametitle{BoVW preparation}
+\begin{itemize}
+\item Extract local descriptors from blob patch: HOG, LBP
+\item K-means segmentation for quantization
+\item Use histograms of visual words as feature vectors
+\end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{BoVW preparation}
+\par Unfortunately I got stuck on this point two weeks before challenge deadline.
+\begin{center}
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{pics/output.png}
+\caption{Typical picture of BoW features  after applying PCA.}
+\end{figure}
 \end{center}
 \end{frame}

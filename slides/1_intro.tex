@@ -7,7 +7,7 @@
 \begin{frame}\frametitle{Data} 
 \par \textbf{Goal}: Identify signs of diabetic retinopathy in eye images
 \par \textbf{Given}: 35126 images for training, 53576 images in test set
-\par Images are big: 2500x2000
+\par Images are big: 2500x2000 and larger
 \par Compressed data size: 88Gb
 
 \vspace{5pt}
@@ -53,11 +53,27 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 
 \subsection{Competition Results}
 
+\begin{frame}\frametitle{Private leaderboard} 
+\vspace{-20pt}
+\begin{center}
+\begin{figure}
+\includegraphics[width=\textwidth]{pics/private_lb_selected.pdf}
+\end{figure}
+\end{center}
+\end{frame}
+
+
+\begin{frame}\frametitle{Teams distribution on private LB} 
+\vspace{-5pt}
+\begin{center}
+\includegraphics[width=\textwidth]{pics/private_lb_distribution.pdf}
+\end{center}
+\end{frame}
+
+
 \begin{frame}\frametitle{} 
 \begin{center}
-\only<1>{\includegraphics[width=\textwidth]{pics/private_lb_selected.pdf}}
-\only<2>{\includegraphics[width=\textwidth]{pics/private_lb_distribution.pdf}}
-\only<3>{\includegraphics[width=\textwidth]{pics/private_lb_score_increase.pdf}}
+\includegraphics[width=\textwidth]{pics/private_lb_score_increase.pdf}
 \end{center}
 \end{frame}
 

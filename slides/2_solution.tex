@@ -5,13 +5,15 @@
 
 \begin{frame}\frametitle{Domain knowledge: diabetic retinopathy symptoms}
 
-\small Was prepared with assistance of ophthalmologist (Vera Shevchenko)
-
+\begin{itemize}
+\item {\hyperlink{https://goo.gl/s5lMt8}{DR symptoms cheatsheet: https://goo.gl/s5lMt8}
 \begin{center}
-\par \includegraphics[interpolate=true,valign=c,width=0.5\textwidth]{pics/symptoms_pic.png}
-\vspace{5pt}
-\par \hyperlink{https://goo.gl/s5lMt8}{Google Docs: https://goo.gl/s5lMt8}
+\par \includegraphics[interpolate=true,valign=c,width=0.4\textwidth]{pics/symptoms_pic.png}
 \end{center}
+Was prepared with assistance of Vera Shevchenko
+}
+\item \href{http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}{International Clinical Diabetic Retinopathy Disease Severity Scale, Detailed Table: \small http://www.icoph.org/downloads/Diabetic-Retinopathy-Detail.pdf}
+\end{itemize}
 
 \end{frame}
 
@@ -88,6 +90,42 @@
 \par Output
 \end{frame}
 
+\subsection{Network configuration}
+\begin{frame}\frametitle{}
+
+\begin{table}[]
+\tiny	
+\centering
+\begin{tabular}{@{}lll@{}}
+Layer type & Size & Output shape \\
+cyclic slice &  & (128, 1, 95, 95) \\
+convolution & 32 3x3 filters & (128, 32, 95, 95) \\
+convolution & 16 3x3 filters & (128, 16, 95, 95) \\
+max pooling & 3x3, stride 2 & (128, 16, 47, 47) \\
+cyclic roll &  & (128, 64, 47, 47) \\
+convolution & 64 3x3 filters & (128, 64, 47, 47) \\
+convolution & 32 3x3 filters & (128, 32, 47, 47) \\
+max pooling & 3x3, stride 2 & (128, 32, 23, 23) \\
+cyclic roll &  & (128, 128, 23, 23) \\
+convolution & 128 3x3 filters & (128, 128, 23, 23) \\
+convolution & 128 3x3 filters & (128, 128, 23, 23) \\
+convolution & 64 3x3 filters & (128, 64, 23, 23) \\
+max pooling & 3x3, stride 2 & (128, 64, 11, 11) \\
+cyclic roll &  & (128, 256, 11, 11) \\
+convolution & 256 3x3 filters & (128, 256, 11, 11) \\
+convolution & 256 3x3 filters & (128, 256, 11, 11) \\
+convolution & 128 3x3 filters & (128, 128, 11, 11) \\
+max pooling & 3x3, stride 2 & (128, 128, 5, 5) \\
+cyclic roll &  & (128, 512, 5, 5) \\
+fully connected & 512 2-piece maxout units & (128, 512) \\
+cyclic pooling (rms) &  & (32, 512) \\
+fully connected & 512 2-piece maxout units & (32, 512) \\
+fully connected & 121-way softmax & (32, 121)
+\end{tabular}
+\end{table}
+\end{frame}
+
+
 \subsection{Decision making}
 
 \begin{frame}\frametitle{}
@@ -96,4 +134,4 @@
 \end{frame}
 
 
-\include{2_2_ma_detection}
+\input{2_2_ma_detection}
