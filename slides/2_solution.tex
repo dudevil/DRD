@@ -1,0 +1,99 @@
+% % % %
+% % % % Solution
+% % % %
+\section{Solution}
+
+\begin{frame}\frametitle{Domain knowledge: diabetic retinopathy symptoms}
+
+\small Was prepared with assistance of ophthalmologist (Vera Shevchenko)
+
+\begin{center}
+\par \includegraphics[interpolate=true,valign=c,width=0.5\textwidth]{pics/symptoms_pic.png}
+\vspace{5pt}
+\par \hyperlink{https://goo.gl/s5lMt8}{Google Docs: https://goo.gl/s5lMt8}
+\end{center}
+
+\end{frame}
+
+\subsection{Data preparation}
+
+
+\begin{frame}\frametitle{Preprocessing}
+\begin{columns}
+
+\begin{column}{9cm}
+\begin{itemize}
+\item Crop black borders
+\vspace{20pt}
+
+\item Extent to square + resize
+\vspace{20pt}
+
+\item Optionally: crop internal square
+\vspace{20pt}
+
+\item Optionally: Local Contrast Normalization (LCN) \\ 
+      $ \hat{I}_{x,y} = \frac{I_{x,y} - \mu_{x,y}}{\sigma_{x,y}} $
+\end{itemize}
+\end{column}
+
+\begin{column}{6cm}
+\begin{tabular}{ @{}c m{0.25cm} c }
+
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.jpeg} & $\rightarrow$ &
+    \includegraphics[valign=c,height=0.5cm]{pics/10_left.png}
+    \vspace{10pt} \\ 
+    
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+    \includegraphics[valign=c,height=0.25cm]{pics/10_left.png}
+	\vspace{10pt} \\ 	
+
+	\adjustbox{valign=c}{\begin{tikzpicture}
+	    \node[anchor=south west,inner sep=0] (image) at (0,0) {\includegraphics[valign=c,height=0.5cm]{pics/10_left.png}};
+	        \begin{scope}[x={(image.south east)},y={(image.north west)}]
+	            \draw[red] (0,0.5) -- (0.5,1) -- (1,0.5) -- (0.5,0) -- (0,0.5);
+	        \end{scope}
+	\end{tikzpicture}} & $\rightarrow$ &
+	    \includegraphics[valign=c,height=0.5cm]{pics/10_left_inner.png}
+    \vspace{10pt} \\
+
+%    \includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+%    \includegraphics[valign=c,height=0.5cm]{pics/10_left_inner.png}
+%	\vspace{10pt} \\
+
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left.png} & $\rightarrow$ &
+	\includegraphics[valign=c,height=0.5cm]{pics/10_left_lcn.png}
+	\\
+
+
+\end{tabular}
+\end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}\frametitle{Augmentation}
+\begin{itemize}
+\item Random mirror
+\item Random rotation
+\item Color augmentation - not helped
+\end{itemize}
+
+\end{frame}
+
+\subsection{Network configuration}
+\begin{frame}\frametitle{}
+\par Slice rotate
+\par Merge
+\par Output
+\end{frame}
+
+\subsection{Decision making}
+
+\begin{frame}\frametitle{}
+\par Predict score for eyes independently
+\par Final score = max(left, right)
+\end{frame}
+
+
+\include{2_2_ma_detection}
