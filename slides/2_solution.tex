@@ -91,38 +91,42 @@ Was prepared with assistance of Vera Shevchenko
 \end{frame}
 
 \subsection{Network configuration}
-\begin{frame}\frametitle{}
 
-\begin{table}[]
-\tiny	
+\begin{frame}\frametitle{Network configuration}
 \centering
-\begin{tabular}{@{}lll@{}}
-Layer type & Size & Output shape \\
-cyclic slice &  & (128, 1, 95, 95) \\
-convolution & 32 3x3 filters & (128, 32, 95, 95) \\
-convolution & 16 3x3 filters & (128, 16, 95, 95) \\
-max pooling & 3x3, stride 2 & (128, 16, 47, 47) \\
-cyclic roll &  & (128, 64, 47, 47) \\
-convolution & 64 3x3 filters & (128, 64, 47, 47) \\
-convolution & 32 3x3 filters & (128, 32, 47, 47) \\
-max pooling & 3x3, stride 2 & (128, 32, 23, 23) \\
-cyclic roll &  & (128, 128, 23, 23) \\
-convolution & 128 3x3 filters & (128, 128, 23, 23) \\
-convolution & 128 3x3 filters & (128, 128, 23, 23) \\
-convolution & 64 3x3 filters & (128, 64, 23, 23) \\
-max pooling & 3x3, stride 2 & (128, 64, 11, 11) \\
-cyclic roll &  & (128, 256, 11, 11) \\
-convolution & 256 3x3 filters & (128, 256, 11, 11) \\
-convolution & 256 3x3 filters & (128, 256, 11, 11) \\
-convolution & 128 3x3 filters & (128, 128, 11, 11) \\
-max pooling & 3x3, stride 2 & (128, 128, 5, 5) \\
-cyclic roll &  & (128, 512, 5, 5) \\
-fully connected & 512 2-piece maxout units & (128, 512) \\
-cyclic pooling (rms) &  & (32, 512) \\
-fully connected & 512 2-piece maxout units & (32, 512) \\
-fully connected & 121-way softmax & (32, 121)
+\begin{table}[]
+\tiny
+\centering
+\begin{tabular}{@{}clcllr@{}}
+\toprule
+   & Layer type                & Size &             & Output Shape        & Outputs \\ \midrule
+1  & InputLayer                &      &             & (64, 3, 256, 256)   & $196\,608$  \\
+2  & \textbf{SliceRotateLayer} &      &             & (256, 3, 128, 128)  & $49\,152$   \\
+3  & Conv2DDNNLayer            & 3x3  & LReLU       & (256, 64, 126, 126) & $1\,016\,064$ \\
+4  & MaxPool2DDNNLayer         & 3x3  & stride 2x2  & (256, 64, 62, 62)   & $246\,016$  \\
+5  & DropoutLayer              &      & P=0.1       & (256, 64, 62, 62)   & $246\,016$  \\
+6  & Conv2DDNNLayer            & 3x3  &             & (256, 96, 60, 60)   & $345\,600$  \\
+7  & MaxPool2DDNNLayer         & 3x3  & stride 2x2  & (256, 96, 29, 29)   & $80\,736$   \\
+8  & DropoutLayer              &      & P=0.2       & (256, 96, 29, 29)   & $80\,736$   \\
+9  & Conv2DDNNLayer            & 3x3  & LReLU       & (256, 128, 27, 27)  & $93\,312$   \\
+10 & DropoutLayer              &      & P=0.3       & (256, 128, 27, 27)  & $93\,312$   \\
+11 & Conv2DDNNLayer            & 3x3  & LReLU       & (256, 96, 25, 25)   & $60\,000$   \\
+12 & MaxPool2DDNNLayer         & 3x3  & stride 2x2  & (256, 96, 12, 12)   & $13\,824$   \\
+13 & DropoutLayer              &      & P=0.4       & (256, 96, 12, 12)   & $13\,824$   \\
+14 & Conv2DDNNLayer            & 3x3  & LReLU       & (256, 128, 10, 10)  & $12\,800$   \\
+15 & MaxPool2DDNNLayer         & 2x2  & stride 2x2  & (256, 128, 5, 5)    & $3\,200$    \\
+16 & \textbf{RotateMergeLayer} &      &             & (64, 12800)         & $12\,800$   \\
+17 & DropoutLayer              &      & P=0.5       & (64, 12800)         & $12\,800$   \\
+18 & DenseLayer                & 512  &             & (64, 512)           & $512$     \\
+19 & FeaturePoolLayer          &      & FeaturePool & (64, 256)           & $256$     \\
+20 & DropoutLayer              &      & P=0.5       & (64, 256)           & $256$     \\
+21 & DenseLayer                & 512  &             & (64, 512)           & $512$     \\
+22 & FeaturePoolLayer          &      & FeaturePool & (64, 256)           & $256$     \\
+23 & DropoutLayer              &      & P=0.5       & (64, 256)           & $256$     \\
+24 & DenseLayer                &      &             & (64, 4)             & $4$       \\ \bottomrule
 \end{tabular}
 \end{table}
+
 \end{frame}
 
 
