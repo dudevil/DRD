@@ -172,6 +172,35 @@ Was prepared with assistance of Vera Shevchenko
 
 \end{frame}
 
+\subsection{Activations}
+
+\begin{frame}\frametitle{}
+\begin{center}
+\includegraphics[valign=t,scale=0.25]{pics/relus.pdf}
+\end{center}
+\par We used Leaky ReLUs for convolutional layer, this activation function acts like a regularizer.
+\par Used Maxout\footnote{\href{http://arxiv.org/abs/1302.4389v4}{Maxout Networks. http://arxiv.org/abs/1302.4389v4}} activations for fully-connected layers.
+\end{frame}
+
+\subsection{Ordinal regression}
+
+\begin{frame}\frametitle{}
+\begin{itemize}
+
+\item Ordinal regression\footnote{\href{https://web.missouri.edu/~zwyw6/files/rank.pdf}{A Neural Network Approach to Ordinal Regression}} is like an ordered classification.
+\item Target coding: \\\vspace{0.25cm}
+0 $\rightarrow$  0 0 0 0\\
+2 $\rightarrow$  1 1 0 0\\
+4 $\rightarrow$  1 1 1 1\\
+\item Do not normalize the sigmoids in the last fully-connected layer:\\\vspace{0.5cm}
+\begin{center}
+\begin{Large}
+$\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z_i}}$
+\end{Large}
+\end{center}
+\end{itemize}
+\end{frame}
+
 
 \subsection{Decision making}
 
