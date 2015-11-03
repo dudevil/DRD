@@ -132,15 +132,17 @@ Was prepared with assistance of Vera Shevchenko
 
 \begin{frame}\frametitle{Special layers}
 
-\begin{columns}
+\begin{columns}[t]
 \begin{column}{5cm}
 \centering
 \par SliceRotateLayer
 
+\vspace{0.25cm}
+
 \begin{tikzpicture}[auto, node distance=0.1cm, >=latex]
 	\node[anchor=south west,inner sep=0] (image) at (0,0) {\includegraphics[valign=c,height=1.0cm]{pics/10_left.png}};
 	\begin{scope}[x={(image.south east)},y={(image.north west)}]
-		\draw[yellow,line width=0.4mm] (0,0.51)    rectangle (0.49,1);
+		\draw[orange,line width=0.4mm] (0,0.51)    rectangle (0.49,1);
 		\draw[blue,line width=0.4mm]   (0.51,0)    rectangle (1,0.49);
 		\draw[red,line width=0.4mm]    (0,0)       rectangle (0.49,0.49);
 		\draw[green,line width=0.4mm]  (0.51,0.51) rectangle (1,1);
@@ -148,25 +150,55 @@ Was prepared with assistance of Vera Shevchenko
 
 \end{tikzpicture}
 
-\vspace{0.25cm}
+\par $\Downarrow$
 
 \begin{tikzpicture}
 % Layers
-\begin{scope}[x={(-0.7cm,0.7cm)}, y={(1.25cm,.3cm)}, z={(0cm,0.1cm)}]
-\node[canvas is yx plane at z=0,transform shape] at (0,0) {
-	\adjincludegraphics[height=1.0cm,trim={0 0 {.5\width} {.5\width}},clip]{pics/10_left.png}};
+\begin{scope}[x={(90:1cm)}, y={(0:1cm)}, z={(30:0.15cm)}]
+\node[canvas is yx plane at z=0,transform shape] (imageone) at (0,0) {
+	\adjincludegraphics[height=1.0cm,trim={0 {.5\width} {.5\width} 0},clip,angle=270,cfbox=blue 1pt 1pt]{pics/10_left.png}};
 \node[canvas is yx plane at z=2,transform shape] at (0,0) {
-	\adjincludegraphics[height=1.0cm,trim={{.5\width} {.5\width} 0 0},clip]{pics/10_left.png}};
+	\adjincludegraphics[height=1.0cm,trim={{.5\width} {.5\width} 0 0},clip,angle=0,cfbox=green 1pt 1pt]{pics/10_left.png}};
 \node[canvas is yx plane at z=4,transform shape] at (0,0) {
-	\adjincludegraphics[height=1.0cm,trim={0 {.5\width} {.5\width} 0},clip]{pics/10_left.png}};
+	\adjincludegraphics[height=1.0cm,trim={{.5\width} 0 0 {.5\width}},clip,angle=90,cfbox=orange 1pt 1pt]{pics/10_left.png}};
 \node[canvas is yx plane at z=6,transform shape] at (0,0) {
-	\adjincludegraphics[height=1.0cm,trim={0 0 {.5\width} {.5\width}},clip]{pics/10_left.png}};
+	\adjincludegraphics[height=1.0cm,trim={0 0 {.5\width} {.5\width}},clip,angle=180,cfbox=red 1pt 1pt]{pics/10_left.png}};
 \end{scope}
 \end{tikzpicture}
 
+
+
 \end{column}
 \begin{column}{5cm}
+\centering
 \par RotateMergeLayer
+
+\begin{tikzpicture}
+% Layers
+\begin{scope}[x={(90:1cm)}, y={(0:1cm)}, z={(30:0.15cm)}]
+\node[canvas is yx plane at z=0,transform shape] (imageone) at (0,0) {
+	\adjincludegraphics[height=1.0cm,trim={0 {.5\width} {.5\width} 0},clip,angle=270,cfbox=blue 1pt 1pt]{pics/10_left_cnn.png}};
+\node[canvas is yx plane at z=2,transform shape] at (0,0) {
+	\adjincludegraphics[height=1.0cm,trim={{.5\width} {.5\width} 0 0},clip,angle=0,cfbox=green 1pt 1pt]{pics/10_left_cnn.png}};
+\node[canvas is yx plane at z=4,transform shape] at (0,0) {
+	\adjincludegraphics[height=1.0cm,trim={{.5\width} 0 0 {.5\width}},clip,angle=90,cfbox=orange 1pt 1pt]{pics/10_left_cnn.png}};
+\node[canvas is yx plane at z=6,transform shape] at (0,0) {
+	\adjincludegraphics[height=1.0cm,trim={0 0 {.5\width} {.5\width}},clip,angle=180,cfbox=red 1pt 1pt]{pics/10_left_cnn.png}};
+\end{scope}
+\end{tikzpicture}
+
+\par $\Downarrow$
+
+%\begin{tikzpicture}[auto, node distance=0.1cm, >=latex]
+\par \small Dense layer
+\begin{tikzpicture}
+\draw [fill=blue]   (0,0) rectangle (1,0.2);
+\draw [fill=green] (1,0) rectangle (2,0.2);
+\draw [fill=orange]   (2,0) rectangle (3,0.2);
+\draw [fill=red] (3,0) rectangle (4,0.2);
+\end{tikzpicture}
+
+
 \end{column}
 \end{columns}
 
