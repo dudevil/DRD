@@ -3,24 +3,26 @@
 \subsection{Motivation}
 \begin{frame}\frametitle{Motivation I}
 \vspace{-0.7cm}
-\par Microaneurysms are early symptoms of diabetic retinopathy
+
+\par Microaneurysms the earliest clinical sign of diabetic retinopathy; they appear as small, red dots in the superficial retinal layers
+
 \vspace{-20pt}
 
 \begin{table}[]
 \begin{tabular}{|p{2cm}|p{8cm}|}
 \hline
 Disease level &  Findings observable upon dilated ophthalmoscopy \\ \hline
-\footnotesize None &  No abnormalities \\ \hline
-\footnotesize Mild NPDR & { Microaneurysms only} \\ \hline
-\footnotesize Moderate NDPR &  More than just MA but less than severe NPDR \\ \hline
-\multirow{4}{*}{\footnotesize Severe NPDR} & \multirow{4}{*}{\begin{tabular}[c]{@{}l@{}}
+ None &  No abnormalities \\ \hline
+ Mild & { Microaneurysms only} \\ \hline
+ Moderate &  More than just MA but less than severe NPDR \\ \hline
+\multirow{4}{*}{ \vspace{10pt} Severe \vspace{-15pt} } & \multirow{4}{*}{\vspace{10pt} \begin{tabular}[c]{@{}l@{}}
  $>$20 intraretinal hemorrhages in each quad \\
 or  Definite venous beading in 2+ quads \\
-or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
+or  Intraretinal microvascular anomalies in 1+ quad  \vspace{-15pt} \end{tabular}} \\
  &  \\
  &  \\
  &  \\ \hline
-\footnotesize PDR & \begin{tabular}[c]{@{}l@{}} Neovascularization\\  or/and Vitreous/preretinal hemorrhage\end{tabular} \\ \hline
+ Proliferative & \begin{tabular}[c]{@{}l@{}} Neovascularization\\  or/and Vitreous/preretinal hemorrhage\end{tabular} \\ \hline
 \end{tabular}
 \end{table}
 
@@ -30,19 +32,19 @@ or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
 
 \begin{frame}\frametitle{Motivation II}
 \vspace{-0.7cm}
-\par We have problems with detection of early symptoms
+\par We had problems with detection of early symptoms
 \par
 \begin{figure}
 \begin{center}
 \vspace{-5pt}
 \includegraphics[width=0.4\textwidth]{pics/submission_21_inner_squares_conv5_maxout.png}
-\caption{Confusion matrix on 128x128 pixels input}
+\caption{Confusion matrix on 256x256 pixels input}
 \vspace{-15pt}
 \end{center}
 \end{figure}
 
 \par MA have round shape with 2-5 pixels in radius on 1024x1024 image 
-\par MA became invisible after downsampling to 128x128/256x256
+\par MA became invisible after downsampling to 256x256
 \par $\Rightarrow$ Classes 0,1,2 almost indistinguishable due to low resolution
 \par We have not enough resources\&data to learn on highres images
 \par $\Rightarrow$ Let's try plain old image processing
@@ -98,7 +100,7 @@ L_{xy}(\mathbf{x}) & L_{yy}(\mathbf{x})\\
 }
 
 
-\begin{frame}\frametitle{Microaneurysm candidates}
+\begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian III}
 
 \begin{columns}
 \begin{column}{1cm}
@@ -145,24 +147,27 @@ L_{xy}(\mathbf{x}) & L_{yy}(\mathbf{x})\\
 
 \begin{frame}\frametitle{Microaneurysm candidates}
 \centering
+
 \only<1>{
-\begin{tabular}{@{}c@{}@{}c@{}@{}c@{}@{}c@{}@{}c@{}}
+	\vspace{-0.5cm}
+%\begin{tabular}{@{}c@{}@{}c@{}@{}c@{}@{}c@{}@{}c@{}}
+\begin{tabular}{@{}c@{}@{}c@{}@{}c@{}}
+
+%Normal & Mild & Moderate & Severe & Proliferative \\
+Normal & Moderate & Proliferative \\
 
 
-Normal & Mild & Moderate & Severe & Proliferative \\
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/197_left_0.jpg} &
+%	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1.jpg} &
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/82_right_2.jpg} &
+%	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3.jpg} &
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/2496_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
 
-
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
-
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0_blobs.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1_blobs.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2_blobs.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3_blobs.jpg} &
-	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4_blobs.jpg} \\
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/197_left_0_blobs.jpg} &
+%	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1_blobs.jpg} &
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/82_right_2_blobs.jpg} &
+%	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3_blobs.jpg} &
+	\includegraphics[width=0.33\textwidth]{pics/classified_samples/2496_left_4_blobs.jpg} \\
 
 \end{tabular}
 }
@@ -187,7 +192,7 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
 
 \hline
-{\vspace{-20pt} $[300,450)$} & 
+{$[300,450)$ \vspace{10pt}} & 
 	\includepatches{patches_300_450_1_2_raw.pdf} & 
 	\includepatches{patches_300_450_3_4_raw.pdf} & 
 	\includepatches{patches_300_450_5_6_raw.pdf} & 
@@ -195,7 +200,7 @@ strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & 
 	\includepatches{patches_300_450_7_9_raw.pdf} \\
 
 \hline
-$[450, 600)$ & 
+$[450, 600)$ \vspace{10pt} & 
 	\includepatches{patches_450_600_1_2_raw.pdf} & 
 	\includepatches{patches_450_600_3_4_raw.pdf} & 
 	\includepatches{patches_450_600_5_6_raw.pdf} & 
@@ -203,7 +208,7 @@ $[450, 600)$ &
 	\includepatches{patches_450_600_7_9_raw.pdf} \\
 	
 \hline
-$[600, 750)$ & 
+$[600, 750)$ \vspace{10pt} & 
 	\includepatches{patches_600_750_1_2_raw.pdf} & 
 	\includepatches{patches_600_750_3_4_raw.pdf} & 
 	\includepatches{patches_600_750_5_6_raw.pdf} & 
@@ -211,7 +216,7 @@ $[600, 750)$ &
 	\includepatches{patches_600_750_7_9_raw.pdf} \\
 
 \hline
-$[750, \infty)$ & 
+$[750, \infty)$ \vspace{10pt} & 
 	\includepatches{patches_750_5000_1_2_raw.pdf} & 
 	\includepatches{patches_750_5000_3_4_raw.pdf} & 
 	\includepatches{patches_750_5000_5_6_raw.pdf} & 
@@ -232,7 +237,7 @@ $[750, \infty)$ &
 strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
 
 \hline
-$[300,450)$ & 
+$[300,450)$ \vspace{10pt} & 
 	\includepatches{patches_300_450_1_2_scaled.pdf} & 
 	\includepatches{patches_300_450_3_4_scaled.pdf} & 
 	\includepatches{patches_300_450_5_6_scaled.pdf} & 
@@ -240,7 +245,7 @@ $[300,450)$ &
 	\includepatches{patches_300_450_7_9_scaled.pdf} \\
 
 \hline
-$[450, 600)$ & 
+$[450, 600)$ \vspace{10pt} & 
 	\includepatches{patches_450_600_1_2_scaled.pdf} & 
 	\includepatches{patches_450_600_3_4_scaled.pdf} & 
 	\includepatches{patches_450_600_5_6_scaled.pdf} & 
@@ -248,7 +253,7 @@ $[450, 600)$ &
 	\includepatches{patches_450_600_7_9_scaled.pdf} \\
 	
 \hline
-$[600, 750)$ & 
+$[600, 750)$ \vspace{10pt} & 
 	\includepatches{patches_600_750_1_2_scaled.pdf} & 
 	\includepatches{patches_600_750_3_4_scaled.pdf} & 
 	\includepatches{patches_600_750_5_6_scaled.pdf} & 
@@ -256,7 +261,7 @@ $[600, 750)$ &
 	\includepatches{patches_600_750_7_9_scaled.pdf} \\
 
 \hline
-$[750, \infty)$ & 
+$[750, \infty)$ \vspace{10pt} & 
 	\includepatches{patches_750_5000_1_2_scaled.pdf} & 
 	\includepatches{patches_750_5000_3_4_scaled.pdf} & 
 	\includepatches{patches_750_5000_5_6_scaled.pdf} & 
@@ -272,7 +277,7 @@ $[750, \infty)$ &
 \begin{frame}\frametitle{BoVW preparation}
 \begin{itemize}
 \item Extract local descriptors from blob patch: HOG, LBP
-\item K-means segmentation for quantization
+\item Create code book using K-means vector quantization
 \item Use histograms of visual words as feature vectors
 \end{itemize}
 \end{frame}

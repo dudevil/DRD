@@ -52,7 +52,7 @@ where
 \par If the raters are in complete agreement then $\kappa = 1$. 
 \end{frame}
 
-\begin{frame}\frametitle{Quality metric I: Cohen's kappa (example)}
+\begin{frame}\frametitle{Quality metric I: Cohen's kappa (simple example)}
 \footnotesize
 \begin{table}[]
 \centering
@@ -73,20 +73,30 @@ where
 
 \end{frame}
 
-
-
 \begin{frame}\frametitle{Quality metric II: quadratic weighted kappa} 
+\small
+\vspace{-15pt}
 
 \footnotesize { % TODO: rewrite
-Images have five possible ratings, 0,1,2,3,4.  Each image is characterized by a tuple $ (e_a,e_b) $, which corresponds to its scores by $Rater A$ (human) and $Rater B$ (predicted).  The quadratic weighted kappa is calculated as follows. First, an $N\times N$ histogram matrix $O$ is constructed, such that $O_{i,j}$ corresponds to the number of images that received a rating $i$ by $A$ and a rating $j$ by $B$. An $N\times N$ matrix of weights, $w$, is calculated based on the difference between raters' scores:
+Images have five possible ratings, 0,1,2,3,4.  Image is characterized by a tuple $(e_a,e_b)$, which corresponds to scores by $Rater A$ (human) and $Rater B$ (predicted). 
 
+{\bf Quadratic weighted kappa} is calculated as: 
+\vspace{-2pt}
+\[ \kappa=1-\frac{\sum_{i,j}w_{i,j}O_{i,j}}{\sum_{i,j}w_{i,j}E_{i,j}}, \]
+\vspace{-5pt}
+where:
+\vspace{1pt}
+\begin{itemize}
+\item $O$ is $N\times N$ histogram matrix, such that $O_{i,j}$ corresponds to the number of images that received a rating $i$ by $A$ and a rating $j$ by $B$. 
+
+\item $E$, is $N\times N$ histogram matrix of expected ratings. $E$ calculated, assuming that there is no correlation between rating scores.  This is calculated as the outer product between each rater's histogram vector of ratings, normalized such that $E$ and $O$ have the same sum.
+
+\item $w$ is $N\times N$ matrix of weights, which calculated based on the difference between raters' scores:
+\vspace{-1pt}
 \[ w_{i,j} = \frac{\left(i-j\right)^2}{\left(N-1\right)^2} \]
 
-An $N\times N$ histogram matrix of expected ratings, $E$, is calculated, assuming that there is no correlation between rating scores.  This is calculated as the outer product between each rater's histogram vector of ratings, normalized such that $E$ and $O$ have the same sum.
+\end{itemize}
 
-From these three matrices, the quadratic weighted kappa is calculated as: 
-
-\[ \kappa=1-\frac{\sum_{i,j}w_{i,j}O_{i,j}}{\sum_{i,j}w_{i,j}E_{i,j}}. \]
 }
 
 \end{frame}
