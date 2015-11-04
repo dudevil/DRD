@@ -75,20 +75,37 @@ Was prepared with assistance of Vera Shevchenko
 \end{frame}
 
 \begin{frame}\frametitle{Augmentation}
+\begin{columns}[T]
+\begin{column}{5cm}
 \begin{itemize}
-\item Random mirror
-\item Random rotation
-\item Color augmentation - not helped
+\item Stuff that worked
+\begin{itemize}
+\item Vertical/horizontal Mirror 
+\item Random shifts
+\item Random color noise
+\end{itemize}
 \end{itemize}
 
+\end{column}
+\begin{column}{5cm}
+\begin{itemize}
+\item Stuff that not quite worked
+\begin{itemize}
+\item Rotations
+\item Krizhevsky-style\footnotemark color augmentation
+\item Scaling
+\item Sheering
+\item Many more...
+\end{itemize}
+\end{itemize}
+\end{column}
+\end{columns}
+\vspace{0.25cm}
+\par We suppose that few augmentations worked because of insufficient depth of our network, but experiments with deeper nets led to more overfitting.
+\footcitetext{KRIZ}
 \end{frame}
 
 \subsection{Network configuration}
-\begin{frame}\frametitle{}
-\par Slice rotate
-\par Merge
-\par Output
-\end{frame}
 
 \begin{frame}\frametitle{Network configuration}
 \centering
@@ -126,6 +143,7 @@ Was prepared with assistance of Vera Shevchenko
 \end{table}
 
 \end{frame}
+
 
 
 \begin{frame}\frametitle{Special layers}
@@ -195,29 +213,17 @@ Was prepared with assistance of Vera Shevchenko
 \draw [fill=orange]   (2,0) rectangle (3,0.2);
 \draw [fill=red] (3,0) rectangle (4,0.2);
 \end{tikzpicture}
-
-
 \end{column}
 \end{columns}
-
 \end{frame}
 
-\subsection{Activations}
 
-\begin{frame}\frametitle{}
-\begin{center}
-%\includegraphics[valign=t,scale=0.25]{pics/relus.pdf}
-\end{center}
-\par We used Leaky ReLUs for convolutional layer, this activation function acts like a regularizer.
-\par Used Maxout\footnote{\href{http://arxiv.org/abs/1302.4389v4}{Maxout Networks. http://arxiv.org/abs/1302.4389v4}} activations for fully-connected layers.
-\end{frame}
 
-\subsection{Ordinal regression}
 
-\begin{frame}\frametitle{}
+\begin{frame}\frametitle{Ordinal regression}
 \begin{itemize}
 
-\item Ordinal regression\footnote{\href{https://web.missouri.edu/~zwyw6/files/rank.pdf}{A Neural Network Approach to Ordinal Regression}} is like an ordered classification.
+\item Ordinal regression\footfullcite{ORD} is like an ordered classification.
 \item Target coding: \\\vspace{0.25cm}
 0 $\rightarrow$  0 0 0 0\\
 2 $\rightarrow$  1 1 0 0\\
@@ -228,15 +234,68 @@ Was prepared with assistance of Vera Shevchenko
 $\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z_i}}$
 \end{Large}
 \end{center}
+\item Use MSE loss function.
 \end{itemize}
 \end{frame}
 
 
-\subsection{Decision making}
+\begin{frame}\frametitle{Activations}
+\begin{center}
+\includegraphics[valign=t,scale=0.2]{pics/relus.pdf}
+\end{center}
+\par We used Leaky ReLUs for convolutional layer, this activation function acts like a regularizer.
+\par Used Maxout\footfullcite{MAX} activations for fully-connected layers.
+\end{frame}
+
+
+
+\begin{frame}\frametitle{Optimization I}
+\begin{itemize}
+\item SGD with Nesterov \footfullcite{NAG} momentum of 0.9
+\item About 450000 gradient steps
+\item 3 step learning rate decay: 0.02, 0.01, 0.001
+\item Minibatch size of 32
+\end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{Optimization II}
+\begin{center}
+\includegraphics[valign=t,width=\textwidth]{pics/learning_curve.png}
+\end{center}
+\end{frame}
+
+
+
+\begin{frame}\frametitle{Overfitting}
+\par During the whole competition we were badly overfitting.
+\par Not all of the augmentation approaches worked for us, which made things worse.
+\par The best thing we could come up with was an extensive dropout usage.
+\end{frame}
+
+\begin{frame}\frametitle{Decision making}
+\begin{itemize}
+\item Each eye was processed independently
+\item A  maximum score among the eyes was assigned to both of them
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}\frametitle{Ensembling}
+\par Our final submission was en ensemble of 5 neural networks.
+\par The predictions we weighted according to the confusion matrix on a held-out validation set.
+\par This improved the score by 0.05 points (7 \% improvement).
+\end{frame}
+
+
+\subsection{Software}
 
 \begin{frame}\frametitle{}
-\par Predict score for eyes independently
-\par Final score = max(left, right)
+\begin{itemize}
+\item The solution was built in Python on top of Lasagne\footnote{\href{https://github.com/Lasagne/Lasagne}{https://github.com/Lasagne/Lasagne}} and Theano\footnote{\href{http://deeplearning.net/software/theano/}{http://deeplearning.net/software/theano/}}
+\item Numpy, Pandas and scikit-image were used for loading and manipulating data
+\item Self-written C++/OpenCV utilities for preprocessing and microaneurism detection
+\item Code available at \href{https://github.com/dudevil/DRD}{https://github.com/dudevil/DRD}
+\end{itemize}
 \end{frame}
 
 

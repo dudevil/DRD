@@ -15,6 +15,11 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 
+\usepackage[backend=bibtex,style=authoryear]{biblatex}
+
+
+\addbibresource{citations.bib}
+
 \def\beamer@andinst{\quad}
 \makeatother
 
@@ -52,7 +57,7 @@
 \logo{}
 \addtobeamertemplate{frametitle}{}{%
 	\begin{tikzpicture}[remember picture,overlay]
-	\node[anchor=north east,xshift=-10cm,yshift=2pt] at (current page.north east) {\includegraphics[height=1.2cm]{pics/logo}};
+	\node[anchor=north east,xshift=-10cm,yshift=2pt] at (current page.north east) {\includegraphics[height=1.0cm]{pics/logo}};
 	\end{tikzpicture}
 }
 
@@ -60,7 +65,6 @@
 
 \title{Diabetic Retinopathy Detection}
 \subtitle{}  
-
 \author[]{Sergey Ovcharenko \inst{1} \and Rasim Akhunzyanov \inst{2}}
 \institute[Kaggle]{\inst{1} Deep Learning Engineer at NTech Lab \and \inst{2} Computer Vision Research Engineer at LG Electronics}
 
