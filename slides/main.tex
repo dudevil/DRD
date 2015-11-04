@@ -2,7 +2,7 @@
 \setbeamertemplate{navigation symbols}{}
 
 \usepackage{beamerthemeshadow}
-\usecolortheme{default}
+\usecolortheme{beaver}
 \setbeamerfont{frametitle}{size=\small}
 
 \usepackage{xcolor}
@@ -49,14 +49,22 @@
 	\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}
 	}
 
+\logo{}
+\addtobeamertemplate{frametitle}{}{%
+	\begin{tikzpicture}[remember picture,overlay]
+	\node[anchor=north east,xshift=-10cm,yshift=2pt] at (current page.north east) {\includegraphics[height=1.2cm]{pics/logo}};
+	\end{tikzpicture}
+}
+
 \begin{document}
 
 \title{Diabetic Retinopathy Detection}
 \subtitle{}  
+
 \author[]{Sergey Ovcharenko \inst{1} \and Rasim Akhunzyanov \inst{2}}
 \institute[Kaggle]{\inst{1} Deep Learning Engineer at NTech Lab \and \inst{2} Computer Vision Research Engineer at LG Electronics}
 
-\date{\today} 
+\date{\includegraphics[height=1.2cm]{pics/logo} \\ \today} 
 
 \begin{frame}
 \titlepage
