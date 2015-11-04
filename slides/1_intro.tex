@@ -35,7 +35,26 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 
 \end{frame}
 
-\begin{frame}\frametitle{Quality metric: quadratic weighted kappa} 
+\begin{frame}\frametitle{Quality metric I: Cohen's kappa}
+\footnotesize
+Cohen's kappa measures the agreement between two raters who each classify $N$ items into $C$ mutually exclusive categories. 
+
+
+
+\[ \kappa = \frac{p_o - p_e}{1 - p_e} = 1- \frac{1 - p_o}{1 - p_e}, \]
+
+where
+\begin{itemize}
+\item $p_o$ is the relative observed agreement among raters
+\item $p_e$ is the hypothetical probability of chance agreement, using the observed data to calculate the probabilities of each observer randomly saying each category
+\end{itemize}
+
+If the raters are in complete agreement then $\kappa = 1$.  If there is no agreement among the raters other than what would be expected by chance (as given by $P_E$), $\kappa \leq 0$.
+
+
+\end{frame}
+
+\begin{frame}\frametitle{Quality metric II: quadratic weighted kappa} 
 
 \footnotesize { % TODO: rewrite
 Images have five possible ratings, 0,1,2,3,4.  Each image is characterized by a tuple $ (e_a,e_b) $, which corresponds to its scores by $Rater A$ (human) and $Rater B$ (predicted).  The quadratic weighted kappa is calculated as follows. First, an $N\times N$ histogram matrix $O$ is constructed, such that $O_{i,j}$ corresponds to the number of images that received a rating $i$ by $A$ and a rating $j$ by $B$. An $N\times N$ matrix of weights, $w$, is calculated based on the difference between raters' scores:
