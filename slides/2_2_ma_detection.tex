@@ -48,23 +48,99 @@ or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
 
 \end{frame}
 
-\begin{frame}\frametitle{Bag of visual words}
-\par Detector: Hessian blob detector
-\par Feature extractors: HOG, LBP
-\par Examples of found blobs: negatives and positives
-\par per-class plots of features after PCA
-\par conclusion: not worked :-(
+\subsection{Hessian blob detector} 
+\small
+
+\begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian I}
+
+We want to know how much pixel location is similar to blob shape. Let's calculate Hessian matrix at that point:
+
+\[
+H(\mathbf{x}) = 
+\begin{bmatrix}
+L_{xx}(\mathbf{x}) & L_{xy}(\mathbf{x})\\
+L_{xy}(\mathbf{x}) & L_{yy}(\mathbf{x})\\
+\end{bmatrix}
+\]
+
+\begin{itemize}
+\item $L_{aa}(\mathbf{x})$ is second partial derivative in the $a$ direction 
+\item $L_{ab}(\mathbf{x})$ is the mixed partial second derivative in the $a$ and $b$ directions.
+\end{itemize}
+
+\par Derivatives are computed in some scale $\sigma_I$ -- smoothed by a Gaussian kernel
+ \[L(\mathbf{x}) = g(\sigma_I) \otimes I(\mathbf{x}) .\]
+
+\par Derivatives must be scaled by factor related to the Gaussian kernel: $\sigma_I^2$.
+
 \end{frame}
 
-\subsection{Hessian blob detector}
-\begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian}
-\par SHORT INTRO TO HESSIAN BLOB DETECTION
+\begin{frame}\frametitle{Microaneurysm candidates using the determinant of the Hessian II}
 
-\par By considering the scale-normalized determinant of the Hessian, also referred to as the 
-\[ \operatorname{det} HL(x, y; t) = t^2 (L_{xx} L_{yy} - L_{xy}^2) \]
-where $HL$ denotes the Hessian matrix of $L$ and then detecting scale-space maxima of this operator one obtains another straightforward differential blob detector with automatic scale selection which also responds to saddles
+\par At each scale, \textbf{blobs points} are those points that are local extrema of determinant the Hessian matrix. 
 
-\[(\hat{x}, \hat{y}; \hat{t}) = \operatorname{argmaxlocal}_{(x, y; t)}(\operatorname{det} H L(x, y; t))\]
+\[ \operatorname{det} H(x; \sigma) = \sigma_I^2 ( L_{xx}L_{yy}(\mathbf{x}) - L_{xy}^2(\mathbf{x})) \]
+
+\par Sign of the trace of Hessian matrix help distinguish dark from light points:
+\[ \operatorname{trace} H(x; \sigma) = \sigma_I (L_{xx} + L_{yy}). \]
+
+\par Straightforward differential blob detector with automatic scale selection:
+
+\[ 
+	(\hat{x}, \hat{\sigma}) = 
+	\operatorname{argmaxlocal}_{(x; t)} ( \operatorname{det} H(x; \sigma) ) 
+\]
+
+\end{frame}
+
+\newcommand{\includehessiangraphics}[1]{
+	\adjincludegraphics[width=0.125\textwidth,trim={{.4\width} {.4\width} {.4\width} {.4\width}},clip]{#1}
+}
+
+
+\begin{frame}\frametitle{Microaneurysm candidates}
+
+\begin{columns}
+\begin{column}{1cm}
+
+	\centering
+
+	\par 687\_right
+
+	\adjincludegraphics[width=1.5cm,trim={{.4\width} {.4\width} {.4\width} {.4\width}},clip]{pics/classified_samples/687_right_3.jpg}
+
+	\adjincludegraphics[width=1.5cm,trim={{.4\width} {.4\width} {.4\width} {.4\width}},clip]{pics/classified_samples/687_right_3_high_contrast.jpg}
+
+\end{column}
+\begin{column}{11cm}
+
+
+\begin{tabular}[ht]{ >{\centering\bfseries}m{2cm} @{}c@{}@{}c@{}@{}c@{}@{}c@{}@{}c@{}}
+\toprule
+ & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
+\midrule
+$L_{xx}$ & 
+	\includehessiangraphics{{pics/det_hessian/Lxx_3.000000}.png} &
+	\includehessiangraphics{{pics/det_hessian/Lxx_7.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_15.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_21.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_31.000000}.png} \\
+
+$L_{xy}$ &
+	\includehessiangraphics{{pics/det_hessian/Lxy_3.000000}.png} &
+	\includehessiangraphics{{pics/det_hessian/Lxy_7.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_15.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_21.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_31.000000}.png} \\
+	
+$L_{yy}$ &
+	\includehessiangraphics{{pics/det_hessian/Lyy_3.000000}.png} &
+	\includehessiangraphics{{pics/det_hessian/Lyy_7.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_15.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_21.000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_31.000000}.png} \\
+
+$\operatorname{det} H(x; \sigma)$ & 
+	\includehessiangraphics{{pics/det_hessian/DH_3.000000}.png} &
+	\includehessiangraphics{{pics/det_hessian/DH_7.000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_15.000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_21.000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_31.000000}.png} \\
+\bottomrule
+\end{tabular}
+
+\end{column}
+\end{columns}
+
+
 \end{frame}
 
 \begin{frame}\frametitle{Microaneurysm candidates}
