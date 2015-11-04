@@ -5,6 +5,7 @@
 
 \begin{frame}\frametitle{Domain knowledge: diabetic retinopathy symptoms}
 
+\vspace{-0.9cm}
 \begin{itemize}
 \item {\hyperlink{https://goo.gl/s5lMt8}{DR symptoms cheatsheet: https://goo.gl/s5lMt8}
 \begin{center}
@@ -75,6 +76,7 @@ Was prepared with assistance of Vera Shevchenko
 \end{frame}
 
 \begin{frame}\frametitle{Augmentation}
+\vspace{-2cm}
 \begin{columns}[T]
 \begin{column}{5cm}
 \begin{itemize}
@@ -109,6 +111,7 @@ Was prepared with assistance of Vera Shevchenko
 
 \begin{frame}\frametitle{Network configuration}
 \centering
+\vspace{-1cm}
 \begin{table}[]
 \tiny
 \centering
@@ -147,6 +150,8 @@ Was prepared with assistance of Vera Shevchenko
 
 
 \begin{frame}\frametitle{Special layers}
+
+\vspace{-2cm}
 
 \begin{columns}[t]
 \begin{column}{5cm}
@@ -189,6 +194,8 @@ Was prepared with assistance of Vera Shevchenko
 \centering
 \par RotateMergeLayer
 
+\vspace{0.25cm}
+
 \begin{tikzpicture}
 % Layers
 \begin{scope}[x={(90:1cm)}, y={(0:1cm)}, z={(30:0.15cm)}]
@@ -221,6 +228,9 @@ Was prepared with assistance of Vera Shevchenko
 
 
 \begin{frame}\frametitle{Ordinal regression}
+
+\vspace{-0.75cm}
+
 \begin{itemize}
 
 \item Ordinal regression\footfullcite{ORD} is like an ordered classification.
@@ -240,6 +250,7 @@ $\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z
 
 
 \begin{frame}\frametitle{Activations}
+\vspace{-2cm}
 \begin{center}
 \includegraphics[valign=t,scale=0.2]{pics/relus.pdf}
 \end{center}
@@ -259,6 +270,7 @@ $\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z
 \end{frame}
 
 \begin{frame}\frametitle{Optimization II}
+\vspace{-1cm}
 \begin{center}
 \includegraphics[valign=t,width=\textwidth]{pics/learning_curve.png}
 \end{center}
@@ -267,23 +279,28 @@ $\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z
 
 
 \begin{frame}\frametitle{Overfitting}
-\par During the whole competition we were badly overfitting.
-\par Not all of the augmentation approaches worked for us, which made things worse.
-\par The best thing we could come up with was an extensive dropout usage.
+\begin{itemize}
+\item During the whole competition we were badly overfitting.
+\item Not all of the augmentation approaches worked for us, which made things worse.
+\item The best thing we could come up with was an extensive dropout usage.
+\end{itemize}
 \end{frame}
 
 \begin{frame}\frametitle{Decision making}
 \begin{itemize}
 \item Each eye was processed independently
 \item A  maximum score among the eyes was assigned to both of them
+\item This improved the score by 0.05 points
 \end{itemize}
 
 \end{frame}
 
 \begin{frame}\frametitle{Ensembling}
-\par Our final submission was en ensemble of 5 neural networks.
-\par The predictions we weighted according to the confusion matrix on a held-out validation set.
-\par This improved the score by 0.05 points (7 \% improvement).
+\begin{itemize}
+\item Our final submission was en ensemble of 5 neural networks.
+\item The predictions we weighted according to the confusion matrix on a held-out validation set.
+\item This improved the score by 0.05 points (7 \% improvement).
+\end{itemize}
 \end{frame}
 
 
@@ -294,8 +311,15 @@ $\frac{e^{-z_i}}{\sum\limits_{i=1}^Ke^{-z_i}}$ $\rightarrow$ $\frac{1}{1 + e^{-z
 \item The solution was built in Python on top of Lasagne\footnote{\href{https://github.com/Lasagne/Lasagne}{https://github.com/Lasagne/Lasagne}} and Theano\footnote{\href{http://deeplearning.net/software/theano/}{http://deeplearning.net/software/theano/}}
 \item Numpy, Pandas and scikit-image were used for loading and manipulating data
 \item Self-written C++/OpenCV utilities for preprocessing and microaneurism detection
+\item Theano was built with cuDNN support
 \item Code available at \href{https://github.com/dudevil/DRD}{https://github.com/dudevil/DRD}
 \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{} 
+\begin{center}
+\includegraphics[width=\textwidth]{pics/private_lb_score_increase_annotated.pdf}
+\end{center}
 \end{frame}
 
 

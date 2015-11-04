@@ -36,23 +36,44 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 \end{frame}
 
 \begin{frame}\frametitle{Quality metric I: Cohen's kappa}
-\footnotesize
-Cohen's kappa measures the agreement between two raters who each classify $N$ items into $C$ mutually exclusive categories. 
-
-
+%\footnotesize
+Cohen's kappa measures the agreement between two raters A and B who each classify $N$ items into $C$ mutually exclusive categories. 
 
 \[ \kappa = \frac{p_o - p_e}{1 - p_e} = 1- \frac{1 - p_o}{1 - p_e}, \]
 
 where
 \begin{itemize}
 \item $p_o$ is the relative observed agreement among raters
-\item $p_e$ is the hypothetical probability of chance agreement, using the observed data to calculate the probabilities of each observer randomly saying each category
+\item $p_e$ is the hypothetical probability of chance agreement
 \end{itemize}
 
-If the raters are in complete agreement then $\kappa = 1$.  If there is no agreement among the raters other than what would be expected by chance (as given by $P_E$), $\kappa \leq 0$.
+\par \[\kappa=\frac{Pr[A=B]-Pr[A=B|A \text{ and }B \text{ independent}]}{1-Pr[A=B|A \text{ and }B \text{ independent}]} \]
 
+\par If the raters are in complete agreement then $\kappa = 1$. 
+\end{frame}
+
+\begin{frame}\frametitle{Quality metric I: Cohen's kappa (example)}
+\footnotesize
+\begin{table}[]
+\centering
+\begin{tabular}{c|c|c|c|c|c}
+\cline{3-5}
+\multicolumn{2}{c|}{\multirow{2}{*}{}}           & \multicolumn{3}{c|}{A} &                            \\ \cline{3-6} 
+\multicolumn{2}{c|}{}                            & 1      & 2     & 3     & \multicolumn{1}{c|}{Total} \\ \hline
+\multicolumn{1}{|c|}{\multirow{3}{*}{B}} & 1     & 55     & 5     & 5     & \multicolumn{1}{c|}{65}    \\ \cline{2-6} 
+\multicolumn{1}{|c|}{}                   & 2     & 15     & 45    & 15    & \multicolumn{1}{c|}{75}    \\ \cline{2-6} 
+\multicolumn{1}{|c|}{}                   & 3     & 5      & 10    & 45    & \multicolumn{1}{c|}{60}    \\ \hline
+                                         & Total & 75     & 60    & 65    & \multicolumn{1}{c|}{200}   \\ \cline{2-6} 
+\end{tabular}
+\end{table}
+
+\par \[ p_o = P(1)+P(2)+P(3) = 0.725 \]
+\par \[ p_e = P(1|A)P(1|B)+P(2|A)P(2|B)+P(3|A)P(3|B) = 0.313 \]
+\par \[ \kappa = \frac{p_o - p_e}{1 - p_e} = 0.588 \]
 
 \end{frame}
+
+
 
 \begin{frame}\frametitle{Quality metric II: quadratic weighted kappa} 
 
@@ -76,16 +97,17 @@ From these three matrices, the quadratic weighted kappa is calculated as:
 \vspace{-20pt}
 \begin{center}
 \begin{figure}
-\includegraphics[width=\textwidth]{pics/private_lb_selected.pdf}
+\adjincludegraphics[width=\textwidth,trim={1cm 12cm 1cm 2.5cm},clip]{pics/private_lb_selected.pdf}
 \end{figure}
 \end{center}
 \end{frame}
 
 
 \begin{frame}\frametitle{Teams distribution on private LB} 
-\vspace{-5pt}
+\vspace{-20pt}
 \begin{center}
-\includegraphics[width=\textwidth]{pics/private_lb_distribution.pdf}
+%\includegraphics[width=\textwidth]{pics/private_lb_distribution.pdf}
+\adjincludegraphics[width=\textwidth,trim={1.5cm 0cm 1.5cm 3cm},clip]{pics/private_lb_distribution.pdf}
 \end{center}
 \end{frame}
 

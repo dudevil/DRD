@@ -2,7 +2,7 @@
 
 \subsection{Motivation}
 \begin{frame}\frametitle{Motivation I}
-
+\vspace{-0.7cm}
 \par Microaneurysms are early symptoms of diabetic retinopathy
 \vspace{-20pt}
 
@@ -29,11 +29,12 @@ or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
 \end{frame}
 
 \begin{frame}\frametitle{Motivation II}
+\vspace{-0.7cm}
 \par We have problems with detection of early symptoms
 \par
 \begin{figure}
 \begin{center}
-\vspace{-10pt}
+\vspace{-5pt}
 \includegraphics[width=0.4\textwidth]{pics/submission_21_inner_squares_conv5_maxout.png}
 \caption{Confusion matrix on 128x128 pixels input}
 \vspace{-15pt}
@@ -45,7 +46,6 @@ or  Intraretinal microvascular anomalies in 1+ quad \end{tabular}} \\
 \par $\Rightarrow$ Classes 0,1,2 almost indistinguishable due to low resolution
 \par We have not enough resources\&data to learn on highres images
 \par $\Rightarrow$ Let's try plain old image processing
-
 \end{frame}
 
 \subsection{Hessian blob detector} 
@@ -119,19 +119,19 @@ L_{xy}(\mathbf{x}) & L_{yy}(\mathbf{x})\\
 \toprule
  & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
 \midrule
-$L_{xx}$ & 
+{\vspace{-1cm} $L_{xx}$} & 
 	\includehessiangraphics{{pics/det_hessian/Lxx_3_000000}.png} &
 	\includehessiangraphics{{pics/det_hessian/Lxx_7_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_15_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_21_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxx_31_000000}.png} \\
 
-$L_{xy}$ &
+{\vspace{-1cm} $L_{xy}$} &
 	\includehessiangraphics{{pics/det_hessian/Lxy_3_000000}.png} &
 	\includehessiangraphics{{pics/det_hessian/Lxy_7_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_15_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_21_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lxy_31_000000}.png} \\
 	
-$L_{yy}$ &
+{\vspace{-1cm} $L_{yy}$} &
 	\includehessiangraphics{{pics/det_hessian/Lyy_3_000000}.png} &
 	\includehessiangraphics{{pics/det_hessian/Lyy_7_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_15_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_21_000000}.png} &	\includehessiangraphics{{pics/det_hessian/Lyy_31_000000}.png} \\
 
-$\operatorname{det} H(x; \sigma)$ & 
+{\vspace{-1cm} $\operatorname{det} H(x; \sigma)$} & 
 	\includehessiangraphics{{pics/det_hessian/DH_3_000000}.png} &
 	\includehessiangraphics{{pics/det_hessian/DH_7_000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_15_000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_21_000000}.png} &	\includehessiangraphics{{pics/det_hessian/DH_31_000000}.png} \\
 \bottomrule
@@ -146,18 +146,18 @@ $\operatorname{det} H(x; \sigma)$ &
 \begin{frame}\frametitle{Microaneurysm candidates}
 \centering
 \only<1>{
-\begin{tabular}{|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
-\hline
+\begin{tabular}{@{}c@{}@{}c@{}@{}c@{}@{}c@{}@{}c@{}}
+
 
 Normal & Mild & Moderate & Severe & Proliferative \\
 
-\hline
+
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/687_right_3.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/2496_left_4.jpg} \\\noalign{\vspace{-0.15cm}}
-\hline
+
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/197_left_0_blobs.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/204_right_1_blobs.jpg} &
 	\includegraphics[width=0.2\textwidth]{pics/classified_samples/82_right_2_blobs.jpg} &
@@ -168,24 +168,26 @@ Normal & Mild & Moderate & Severe & Proliferative \\
 }
 
 \only<2>{
+	\vspace{-0.5cm}
 	\includegraphics[width=0.65\textwidth]{pics/classified_samples/82_right_2.jpg}
 }
 
 \only<3>{
+	\vspace{-0.5cm}
 	\includegraphics[width=0.65\textwidth]{pics/classified_samples/82_right_2_blobs.jpg}
 }
 	
 \end{frame}
 
 \begin{frame}\frametitle{How blobs looks}
-
+\vspace{-0.7cm}
 \begin{center}
 \begin{tabular}{| b{0.15\linewidth} |@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
 \hline
 strength & $\sigma = 1.7$ & $\sigma = 3.4$ & $\sigma =  5.1$ & $\sigma = 6.8$ & $\sigma = 8.0$ \\
 
 \hline
-$[300,450)$ & 
+{\vspace{-20pt} $[300,450)$} & 
 	\includepatches{patches_300_450_1_2_raw.pdf} & 
 	\includepatches{patches_300_450_3_4_raw.pdf} & 
 	\includepatches{patches_300_450_5_6_raw.pdf} & 
@@ -223,7 +225,7 @@ $[750, \infty)$ &
 
 
 \begin{frame}\frametitle{How blobs looks}
-
+\vspace{-0.7cm}
 \begin{center}
 \begin{tabular}{| b{0.15\linewidth} |@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|@{}c@{}|}
 \hline
@@ -276,6 +278,7 @@ $[750, \infty)$ &
 \end{frame}
 
 \begin{frame}\frametitle{BoVW preparation}
+\vspace{-0.3cm}
 \par Unfortunately I got stuck on this point two weeks before challenge deadline. :-(
 \begin{center}
 \begin{figure}
